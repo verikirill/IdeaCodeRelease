@@ -97,7 +97,8 @@
   }
 
   .nav-button.active {
-    background-color: #d0d0d0;
+    background-color: #a8a8a8;
+    font-weight: 500;
   }
 
   @media (max-width: 768px) {

@@ -144,126 +144,129 @@
   });
 </script>
 
-<div class="container">
-  <main>
-    <h1 class="main-title">Твой ФФ - университет в одном клике.</h1>
+<div class="main-page"></div>
+<div class="main-content">
+  <div class="container">
+    <main>
+      <h1 class="main-title">Твой ФФ - университет в одном клике.</h1>
 
-    <!-- Main circular buttons -->
-    <div class="circular-buttons">
-      {#each stories as story, index}
-        <div class="circular-button" on:click={() => openStories(index)}>
-          <img src={story.image} alt={story.title} class="story-image">
-        </div>
-      {/each}
-    </div>
+      <!-- Main circular buttons -->
+      <div class="circular-buttons">
+        {#each stories as story, index}
+          <div class="circular-button" on:click={() => openStories(index)}>
+            <img src={story.image} alt={story.title} class="story-image">
+          </div>
+        {/each}
+      </div>
 
-    <!-- Services section -->
-    <section class="services">
-      <h2>Сервисы</h2>
-      <div class="services-grid">
-        {#each services as service}
-          <div class="service-card">
-            {#if service.link}
-              <a href={service.link} class="card-link">
+      <!-- Services section -->
+      <section class="services">
+        <h2>Сервисы</h2>
+        <div class="services-grid">
+          {#each services as service}
+            <div class="service-card">
+              {#if service.link}
+                <a href={service.link} class="card-link">
+                  <h3>{service.title}</h3>
+                  <div class="service-icon">
+                    <img src={service.image} alt={service.title} />
+                  </div>
+                </a>
+              {:else}
                 <h3>{service.title}</h3>
                 <div class="service-icon">
                   <img src={service.image} alt={service.title} />
                 </div>
-              </a>
-            {:else}
-              <h3>{service.title}</h3>
-              <div class="service-icon">
-                <img src={service.image} alt={service.title} />
-              </div>
-            {/if}
-          </div>
-        {/each}
-      </div>
-    </section>
-  </main>
-</div>
-
-{#if showStories}
-  <div class="stories-overlay" transition:fade={{ duration: 200 }}>
-    <div class="stories-slider">
-      <div class="progress-bar">
-        {#each stories as _, i}
-          <div class="progress-segment {i === currentStoryIndex ? 'active' : i < currentStoryIndex ? 'completed' : ''}"></div>
-        {/each}
-      </div>
-      
-      <button class="close-stories" on:click={closeStories}>&times;</button>
-
-      <div class="stories-carousel">
-        {#if currentStoryIndex > 1}
-          <div class="story-card far-prev-card" 
-               on:click={() => prevStory()}>
-            <div class="card-content">
-              <div class="story-image-container">
-                <img src={"/main_page/stories (" + (currentStoryIndex - 1) + ").png"} alt={stories[currentStoryIndex - 2].title} />
-              </div>
+              {/if}
             </div>
-            <div class="card-overlay"></div>
-          </div>
-        {/if}
+          {/each}
+        </div>
+      </section>
+    </main>
+  </div>
 
-        {#if currentStoryIndex > 0}
-          <div class="story-card prev-card" 
-               on:click={() => prevStory()}>
-            <div class="card-content">
-              <div class="story-image-container">
-                <img src={"/main_page/stories (" + currentStoryIndex + ").png"} alt={stories[currentStoryIndex - 1].title} />
-              </div>
-            </div>
-            <div class="card-overlay"></div>
-          </div>
-        {/if}
-        
-        <div class="story-card current-card">
-          {#key currentStoryIndex}
-          <div class="story-image-container"
-               in:fade={{ duration: 550, easing: cubicOut }}>
-            <img src={"/main_page/stories (" + (currentStoryIndex + 1) + ").png"} alt={stories[currentStoryIndex].title} />
-          </div>
-          {/key}
+  {#if showStories}
+    <div class="stories-overlay" transition:fade={{ duration: 200 }}>
+      <div class="stories-slider">
+        <div class="progress-bar">
+          {#each stories as _, i}
+            <div class="progress-segment {i === currentStoryIndex ? 'active' : i < currentStoryIndex ? 'completed' : ''}"></div>
+          {/each}
         </div>
         
-        {#if currentStoryIndex < stories.length - 1}
-          <div class="story-card next-card"
-               on:click={() => nextStory()}>
-            <div class="card-content">
-              <div class="story-image-container">
-                <img src={"/main_page/stories (" + (currentStoryIndex + 2) + ").png"} alt={stories[currentStoryIndex + 1].title} />
-              </div>
-            </div>
-            <div class="card-overlay"></div>
-          </div>
-        {/if}
+        <button class="close-stories" on:click={closeStories}>&times;</button>
 
-        {#if currentStoryIndex < stories.length - 2}
-          <div class="story-card far-next-card"
-               on:click={() => nextStory()}>
-            <div class="card-content">
-              <div class="story-image-container">
-                <img src={"/main_page/stories (" + (currentStoryIndex + 3) + ").png"} alt={stories[currentStoryIndex + 2].title} />
+        <div class="stories-carousel">
+          {#if currentStoryIndex > 1}
+            <div class="story-card far-prev-card" 
+                on:click={() => prevStory()}>
+              <div class="card-content">
+                <div class="story-image-container">
+                  <img src={"/main_page/stories (" + (currentStoryIndex - 1) + ").png"} alt={stories[currentStoryIndex - 2].title} />
+                </div>
               </div>
+              <div class="card-overlay"></div>
             </div>
-            <div class="card-overlay"></div>
+          {/if}
+
+          {#if currentStoryIndex > 0}
+            <div class="story-card prev-card" 
+                on:click={() => prevStory()}>
+              <div class="card-content">
+                <div class="story-image-container">
+                  <img src={"/main_page/stories (" + currentStoryIndex + ").png"} alt={stories[currentStoryIndex - 1].title} />
+                </div>
+              </div>
+              <div class="card-overlay"></div>
+            </div>
+          {/if}
+          
+          <div class="story-card current-card">
+            {#key currentStoryIndex}
+            <div class="story-image-container"
+                in:fade={{ duration: 550, easing: cubicOut }}>
+              <img src={"/main_page/stories (" + (currentStoryIndex + 1) + ").png"} alt={stories[currentStoryIndex].title} />
+            </div>
+            {/key}
           </div>
-        {/if}
-      </div>
-      
-      <div class="story-navigation">
-        <button class="story-nav-button prev" on:click={prevStory} disabled={currentStoryIndex === 0}>
-          <span>❮</span>
-        </button>
-        <button class="story-nav-button next" on:click={nextStory} disabled={currentStoryIndex === stories.length - 1}>
-          <span>❯</span>
-        </button>
+          
+          {#if currentStoryIndex < stories.length - 1}
+            <div class="story-card next-card"
+                on:click={() => nextStory()}>
+              <div class="card-content">
+                <div class="story-image-container">
+                  <img src={"/main_page/stories (" + (currentStoryIndex + 2) + ").png"} alt={stories[currentStoryIndex + 1].title} />
+                </div>
+              </div>
+              <div class="card-overlay"></div>
+            </div>
+          {/if}
+
+          {#if currentStoryIndex < stories.length - 2}
+            <div class="story-card far-next-card"
+                on:click={() => nextStory()}>
+              <div class="card-content">
+                <div class="story-image-container">
+                  <img src={"/main_page/stories (" + (currentStoryIndex + 3) + ").png"} alt={stories[currentStoryIndex + 2].title} />
+                </div>
+              </div>
+              <div class="card-overlay"></div>
+            </div>
+          {/if}
+        </div>
+        
+        <div class="story-navigation">
+          <button class="story-nav-button prev" on:click={prevStory} disabled={currentStoryIndex === 0}>
+            <span>❮</span>
+          </button>
+          <button class="story-nav-button next" on:click={nextStory} disabled={currentStoryIndex === stories.length - 1}>
+            <span>❯</span>
+          </button>
+        </div>
       </div>
     </div>
-  </div>
-{/if}
+  {/if}
+</div>
 
 <style>
   @font-face {
@@ -292,6 +295,26 @@
     src: url('/font/SF-Pro-Display-Light.otf') format('opentype');
     font-weight: 300;
     font-style: normal;
+  }
+
+  /* Фон страницы */
+  .main-page {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url('/main_page/main_background.png');
+    background-size: cover;
+    background-position: center center;
+    background-repeat: no-repeat;
+    z-index: -1;
+  }
+  
+  .main-content {
+    position: relative;
+    min-height: 100vh;
+    z-index: 1;
   }
 
   /* Container */
