@@ -222,8 +222,8 @@
 
   .chat-bubble {
     position: absolute;
-    bottom: 70px;
-    right: 20px;
+    bottom: 90px;
+    right: 30px;
     background-color: #fff;
     padding: 10px 20px;
     border-radius: 18px;
@@ -315,7 +315,7 @@
   .chat-avatar {
     width: 40px;
     height: 40px;
-    border-radius: 50%;
+    border-radius: 40%;
   }
   
   .chat-header-right {
@@ -516,7 +516,7 @@
     right: 20px;
     width: 60px;
     height: 60px;
-    border-radius: 50%;
+    border-radius: 40%;
     background-color: transparent;
     display: flex;
     justify-content: center;

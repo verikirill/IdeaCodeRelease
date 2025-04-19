@@ -2,6 +2,10 @@
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { authStore } from '$lib/services/auth';
+  import { page } from '$app/stores';
+
+  // Добавляем проверку на текущий маршрут
+  $: isRegisterPage = $page.url.pathname === '/register';
 
   let firstName = '';
   let lastName = '';
@@ -13,6 +17,20 @@
   let confirmPasswordInput: HTMLInputElement;
   let errorMessage = '';
   let isLoading = false;
+
+  onMount(() => {
+    // Проверяем, авторизован ли пользователь
+    const unsubAuth = authStore.isAuthenticated.subscribe((isAuth) => {
+      if (isAuth) {
+        // Если авторизован, перенаправляем на главную
+        goto('/');
+      }
+    });
+    
+    return () => {
+      unsubAuth();
+    };
+  });
 
   async function handleRegister() {
     if (password !== confirmPassword) {
@@ -60,6 +78,7 @@
   }
 </script>
 
+{#if isRegisterPage}
 <div class="page-container">
   <div class="content-wrapper">
     <div class="left-section">
@@ -172,6 +191,7 @@
     </div>
   </div>
 </div>
+{/if}
 
 <style>
   @font-face {

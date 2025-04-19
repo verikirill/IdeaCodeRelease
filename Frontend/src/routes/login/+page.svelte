@@ -2,6 +2,10 @@
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { authStore } from '$lib/services/auth';
+  import { page } from '$app/stores';
+
+  // Добавляем проверку на текущий маршрут
+  $: isLoginPage = $page.url.pathname === '/login';
 
   let username = '';
   let password = '';
@@ -9,6 +13,20 @@
   let passwordInput: HTMLInputElement;
   let errorMessage = '';
   let isLoading = false;
+
+  onMount(() => {
+    // Проверяем, авторизован ли пользователь
+    const unsubAuth = authStore.isAuthenticated.subscribe((isAuth) => {
+      if (isAuth) {
+        // Если авторизован, перенаправляем на главную
+        goto('/');
+      }
+    });
+    
+    return () => {
+      unsubAuth();
+    };
+  });
 
   async function handleLogin() {
     if (!username || !password) {
@@ -44,6 +62,7 @@
   }
 </script>
 
+{#if isLoginPage}
 <div class="fullscreen-container">
   <div class="page-container">
     <div class="content-wrapper">
@@ -153,7 +172,6 @@
     margin: 0;
     padding: 0;
     font-family: 'SF Pro Display', Arial, sans-serif;
-    background-color: #333333;
     overflow-x: hidden;
   }
 
@@ -403,4 +421,5 @@
     opacity: 0.7;
     cursor: not-allowed;
   }
-</style> 
+</style>
+{/if} 
