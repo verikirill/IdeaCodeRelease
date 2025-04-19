@@ -1,9 +1,13 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { fade, fly } from 'svelte/transition';
+  import { cubicOut } from 'svelte/easing';
   
   let avatar = '/avatar.png';
   let showStories = false;
   let currentStoryIndex = 0;
+  let prevStoryIndex = 0;
+  let direction = 1; // 1 для вперед, -1 для назад
   
   interface Story {
     id: number;
@@ -51,8 +55,65 @@
     }
   ];
   
+  // Услуги на главной странице
+  interface Service {
+    title: string;
+    image: string;
+    link?: string;
+  }
+  
+  let services: Service[] = [
+    {
+      title: 'Карта\nкорпусов',
+      image: '/main_page/map and pencil.png'
+    },
+    {
+      title: 'Афиша\nмероприятий',
+      image: '/main_page/cute calendar.png',
+      link: '/afisha'
+    },
+    {
+      title: 'База\nзнаний',
+      image: '/main_page/cute books.png'
+    },
+    {
+      title: 'Бюро\nнаходок',
+      image: '/main_page/search cute blue icon.png'
+    },
+    {
+      title: 'Меню\nстоловой',
+      image: '/main_page/cute shopping basket.png',
+      link: '/menu'
+    },
+    {
+      title: 'Мемы\nот студентов',
+      image: '/main_page/emoji with tongue.png'
+    },
+    {
+      title: 'Отзывы\nо преподавателях',
+      image: '/main_page/cute smiling star.png'
+    },
+    {
+      title: 'Пропуск\nна машину',
+      image: '/main_page/document file with code symbol.png'
+    },
+    {
+      title: 'Калькулятор\nстипендий',
+      image: '/main_page/banknotes.png'
+    },
+    {
+      title: 'Бесплатный\nпринтер',
+      image: '/main_page/cash receipt.png'
+    },
+    {
+      title: 'Вступить\nв профком',
+      image: '/main_page/two speech bubbles.png'
+    }
+  ];
+  
   function openStories(index: number) {
     currentStoryIndex = index;
+    prevStoryIndex = index;
     showStories = true;
   }
   
@@ -62,6 +123,8 @@
   
   function nextStory() {
     if (currentStoryIndex < stories.length - 1) {
+      prevStoryIndex = currentStoryIndex;
+      direction = 1;
       currentStoryIndex++;
     } else {
       closeStories();
@@ -70,6 +133,8 @@
   
   function prevStory() {
     if (currentStoryIndex > 0) {
+      prevStoryIndex = currentStoryIndex;
+      direction = -1;
       currentStoryIndex--;
     }
   }
@@ -96,53 +161,30 @@
     <section class="services">
       <h2>Сервисы</h2>
       <div class="services-grid">
-        <div class="service-card">
-          <div class="service-icon">
-            <img src="/main_page/map and pencil.png" alt="Карта корпусов" />
+        {#each services as service}
+          <div class="service-card">
+            {#if service.link}
+              <a href={service.link} class="card-link">
+                <h3>{service.title}</h3>
+                <div class="service-icon">
+                  <img src={service.image} alt={service.title} />
+                </div>
+              </a>
+            {:else}
+              <h3>{service.title}</h3>
+              <div class="service-icon">
+                <img src={service.image} alt={service.title} />
+              </div>
+            {/if}
           </div>
-          <h3>Карта корпусов</h3>
-        </div>
-        <div class="service-card">
-          <a href="/afisha" class="card-link">
-            <div class="service-icon">
-              <img src="/main_page/cute calendar.png" alt="Афиша мероприятий" />
-            </div>
-            <h3>Афиша мероприятий</h3>
-          </a>
-        </div>
-        <div class="service-card">
-          <div class="service-icon">
-            <img src="/main_page/cute books.png" alt="База знаний" />
-          </div>
-          <h3>База знаний</h3>
-        </div>
-        <div class="service-card">
-          <div class="service-icon">
-            <img src="/main_page/search cute blue icon.png" alt="Бюро находок" />
-          </div>
-          <h3>Бюро находок</h3>
-        </div>
-        <div class="service-card">
-          <a href="/menu" class="card-link">
-            <div class="service-icon">
-              <img src="/main_page/cute shopping basket.png" alt="Меню столовой" />
-            </div>
-            <h3>Меню столовой</h3>
-          </a>
-        </div>
-        <div class="service-card">
-          <div class="service-icon">
-            <img src="/main_page/emoji with tongue.png" alt="Мемы от студентов" />
-          </div>
-          <h3>Мемы от студентов</h3>
-        </div>
+        {/each}
       </div>
     </section>
   </main>
 </div>
 
 {#if showStories}
-  <div class="stories-overlay">
+  <div class="stories-overlay" transition:fade={{ duration: 200 }}>
     <div class="stories-slider">
       <div class="progress-bar">
         {#each stories as _, i}
@@ -154,11 +196,11 @@
 
       <div class="stories-carousel">
         {#if currentStoryIndex > 1}
-          <div class="story-card far-prev-card" on:click={() => prevStory()}>
+          <div class="story-card far-prev-card" 
+               on:click={() => prevStory()}>
             <div class="card-content">
-              <h2 class="story-title">{stories[currentStoryIndex - 2].title}</h2>
               <div class="story-image-container">
-                <img src={stories[currentStoryIndex - 2].image} alt={stories[currentStoryIndex - 2].title} />
+                <img src={"/main_page/stories (" + (currentStoryIndex - 1) + ").png"} alt={stories[currentStoryIndex - 2].title} />
               </div>
             </div>
             <div class="card-overlay"></div>
@@ -166,45 +208,44 @@
         {/if}
 
         {#if currentStoryIndex > 0}
-          <div class="story-card prev-card" on:click={() => prevStory()}>
+          <div class="story-card prev-card" 
+               on:click={() => prevStory()}>
             <div class="card-content">
-              <h2 class="story-title">{stories[currentStoryIndex - 1].title}</h2>
               <div class="story-image-container">
-                <img src={stories[currentStoryIndex - 1].image} alt={stories[currentStoryIndex - 1].title} />
+                <img src={"/main_page/stories (" + currentStoryIndex + ").png"} alt={stories[currentStoryIndex - 1].title} />
               </div>
-              <p class="story-description">{stories[currentStoryIndex - 1].content}</p>
             </div>
             <div class="card-overlay"></div>
           </div>
         {/if}
         
         <div class="story-card current-card">
-          <h2 class="story-title">{stories[currentStoryIndex].title}</h2>
-          <div class="story-image-container">
-            <img src={stories[currentStoryIndex].image} alt={stories[currentStoryIndex].title} />
+          {#key currentStoryIndex}
+          <div class="story-image-container"
+               in:fade={{ duration: 550, easing: cubicOut }}>
+            <img src={"/main_page/stories (" + (currentStoryIndex + 1) + ").png"} alt={stories[currentStoryIndex].title} />
           </div>
-          <p class="story-description">{stories[currentStoryIndex].content}</p>
+          {/key}
         </div>
         
         {#if currentStoryIndex < stories.length - 1}
-          <div class="story-card next-card" on:click={() => nextStory()}>
+          <div class="story-card next-card"
+               on:click={() => nextStory()}>
             <div class="card-content">
-              <h2 class="story-title">{stories[currentStoryIndex + 1].title}</h2>
               <div class="story-image-container">
-                <img src={stories[currentStoryIndex + 1].image} alt={stories[currentStoryIndex + 1].title} />
+                <img src={"/main_page/stories (" + (currentStoryIndex + 2) + ").png"} alt={stories[currentStoryIndex + 1].title} />
               </div>
-              <p class="story-description">{stories[currentStoryIndex + 1].content}</p>
             </div>
             <div class="card-overlay"></div>
           </div>
         {/if}
 
         {#if currentStoryIndex < stories.length - 2}
-          <div class="story-card far-next-card" on:click={() => nextStory()}>
+          <div class="story-card far-next-card"
+               on:click={() => nextStory()}>
             <div class="card-content">
-              <h2 class="story-title">{stories[currentStoryIndex + 2].title}</h2>
               <div class="story-image-container">
-                <img src={stories[currentStoryIndex + 2].image} alt={stories[currentStoryIndex + 2].title} />
+                <img src={"/main_page/stories (" + (currentStoryIndex + 3) + ").png"} alt={stories[currentStoryIndex + 2].title} />
               </div>
             </div>
             <div class="card-overlay"></div>
@@ -305,77 +346,92 @@
 
   /* Services section */
   .services {
-    margin: 20px auto;
+    margin: 40px auto;
     padding: 0;
     width: 100%;
-    text-align: center;
+    text-align: left;
   }
 
   .services h2 {
-    margin-bottom: 30px;
-    font-size: 24px;
+    margin-bottom: 25px;
+    font-size: 32px;
     text-align: left;
-    padding-left: 20px;
+    padding-left: 35px;
+    font-weight: 600;
   }
 
   .services-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 25px;
-    width: 100%;
+    gap: 15px;
+    width: 95%;
+    margin: 0 auto;
+    padding: 0 20px;
   }
 
   .service-card {
-    background-color: #E4E4E4;
-    border-radius: 20px;
-    padding: 30px;
+    background-color: #F2F2F2;
+    border-radius: 18px;
+    padding: 18px 25px;
     display: flex;
+    flex-direction: column;
     align-items: flex-start;
-    justify-content: space-between;
-    gap: 20px;
-    min-height: 120px;
+    justify-content: flex-start;
+    aspect-ratio: 2.4 / 1;
     transition: transform 0.2s ease;
     cursor: pointer;
     position: relative;
+    text-align: left;
+    margin: 0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
   }
 
   .service-card:hover {
-    transform: translateY(-5px);
+    transform: translateY(-3px);
   }
 
   .service-card h3 {
     margin: 0;
-    font-size: 24px;
-    font-weight: 500;
+    font-size: 22px;
+    font-weight: 600;
     line-height: 1.2;
-    order: 1;
+    text-align: left;
+    width: 60%;
+    white-space: pre-wrap;
+    position: relative;
+    z-index: 2;
   }
 
   .service-icon {
-    width: 100px;
-    height: 100px;
-    flex-shrink: 0;
+    position: absolute;
+    bottom: 12px;
+    right: 25px;
+    width: 25%;
+    height: 75%;
     display: flex;
-    align-items: center;
-    justify-content: center;
-    order: 2;
+    align-items: flex-end;
+    justify-content: flex-end;
+    z-index: 1;
   }
 
   .service-icon img {
     width: 100%;
-    height: 100%;
+    height: auto;
     object-fit: contain;
+    max-height: 100%;
   }
 
   .card-link {
     display: flex;
+    flex-direction: column;
     width: 100%;
     height: 100%;
     text-decoration: none;
     color: inherit;
-    justify-content: space-between;
+    justify-content: flex-start;
     align-items: flex-start;
-    gap: 20px;
+    position: relative;
   }
 
   /* Stories Overlay */
@@ -401,7 +457,7 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding-top: 20px;
+    padding-top: 50px;
   }
   
   .progress-bar {
@@ -409,7 +465,11 @@
     gap: 5px;
     width: 400px;
     margin-bottom: 15px;
-    z-index: 10;
+    z-index: 20;
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
   }
   
   .progress-segment {
@@ -417,14 +477,17 @@
     flex: 1;
     background-color: rgba(255, 255, 255, 0.3);
     border-radius: 3px;
+    transition: background-color 0.3s ease;
   }
   
   .progress-segment.active {
     background-color: #1A3882;
+    animation: progress 5s linear;
   }
   
-  .progress-segment.completed {
-    background-color: #1A3882;
+  @keyframes progress {
+    from { background-color: #1A3882; width: 0; }
+    to { background-color: #1A3882; width: 100%; }
   }
   
   .close-stories {
@@ -446,51 +509,89 @@
     width: 100%;
     height: 80vh;
     position: relative;
-    gap: 20px;
   }
   
   .story-card {
     position: relative;
-    border-radius: 20px;
+    border-radius: 40px;
     overflow: hidden;
     transition: all 0.3s ease;
     background-color: #E4E4E4;
     flex-shrink: 0;
+    aspect-ratio: 9/16;
   }
   
   .current-card {
-    width: 400px;
-    height: 90%;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 350px;
     z-index: 5;
-    padding: 20px;
+    padding: 0;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
   }
   
-  .prev-card, .next-card {
-    height: 70%;
+  .prev-card {
+    position: absolute;
+    left: calc(50% - 470px);
+    top: 50%;
+    transform: translateY(-50%);
     width: 250px;
     z-index: 3;
     cursor: pointer;
+    transition: opacity 0.5s ease;
   }
   
-  .far-prev-card, .far-next-card {
-    height: 60%;
+  .next-card {
+    position: absolute;
+    left: calc(50% + 220px);
+    top: 50%;
+    transform: translateY(-50%);
+    width: 250px;
+    z-index: 3;
+    cursor: pointer;
+    transition: opacity 0.5s ease;
+  }
+  
+  .far-prev-card {
+    position: absolute;
+    left: calc(50% - 690px);
+    top: 50%;
+    transform: translateY(-50%);
     width: 200px;
     z-index: 1;
     cursor: pointer;
+    transition: opacity 0.5s ease;
   }
   
-  .prev-card, .far-prev-card, .next-card, .far-next-card {
-    display: flex;
-    flex-direction: column;
+  .far-next-card {
+    position: absolute;
+    left: calc(50% + 490px);
+    top: 50%;
+    transform: translateY(-50%);
+    width: 200px;
+    z-index: 1;
+    cursor: pointer;
+    transition: opacity 0.5s ease;
+  }
+  
+  .prev-card:hover, .next-card:hover {
+    transform: translateY(-50%);
+  }
+  
+  .far-prev-card:hover, .far-next-card:hover {
+    transform: translateY(-50%);
   }
   
   .card-content {
-    padding: 15px;
+    padding: 0;
     display: flex;
     flex-direction: column;
     height: 100%;
+    width: 100%;
     position: relative;
     z-index: 1;
   }
@@ -501,13 +602,13 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
+    background-color: rgba(0, 0, 0, 0.3);
     z-index: 2;
   }
   
   .far-prev-card .card-overlay, 
   .far-next-card .card-overlay {
-    background-color: rgba(0, 0, 0, 0.7);
+    background-color: rgba(0, 0, 0, 0.5);
   }
   
   .story-title {
@@ -518,19 +619,20 @@
   
   .story-image-container {
     width: 100%;
-    height: 200px;
+    height: 100%;
     display: flex;
     justify-content: center;
     align-items: center;
-    margin-bottom: 20px;
+    margin: 0;
+    padding: 0;
+    border-radius: 40px;
     overflow: hidden;
-    border-radius: 15px;
   }
   
   .story-image-container img {
     width: 100%;
     height: 100%;
-    object-fit: contain;
+    object-fit: cover;
   }
   
   .story-description {
@@ -597,6 +699,28 @@
   @media (max-width: 768px) {
     .services-grid {
       grid-template-columns: 1fr;
+      padding: 0 20px;
+    }
+    
+    .services h2 {
+      padding-left: 25px;
+      font-size: 28px;
+    }
+    
+    .service-card {
+      padding: 16px 20px;
+      aspect-ratio: 2.6 / 1;
+    }
+    
+    .service-card h3 {
+      font-size: 20px;
+      width: 65%;
+    }
+    
+    .service-icon {
+      bottom: 10px;
+      right: 20px;
+      height: 70%;
     }
     
     .circular-buttons {
@@ -610,20 +734,6 @@
     .story-image {
       width: 70px;
       height: 70px;
-    }
-    
-    .story-nav-button {
-      width: 32px;
-      height: 32px;
-      margin: 0 10px;
-    }
-    
-    .story-nav-button.prev {
-      margin-left: 15px;
-    }
-    
-    .story-nav-button.next {
-      margin-right: 15px;
     }
   }
 </style>

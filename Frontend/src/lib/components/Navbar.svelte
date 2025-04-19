@@ -21,7 +21,7 @@
         Сервисы <span class="icon"><img src="/top3.svg" alt="Сервисы"></span>
       </button>
     </a>
-    <a href="https://t.me/" target="_blank" class="tg-link">
+    <a href="https://t.me/FFizikBot" target="_blank" rel="noopener noreferrer" class="tg-link">
       <img src="/tg_icon.svg" alt="Telegram" class="tg-icon">
     </a>
   </div>
