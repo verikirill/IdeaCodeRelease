@@ -1,9 +1,15 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { authStore } from '$lib/services/auth';
+  import { registerForEvent, unregisterFromEvent } from '$lib/services/events';
+  import { goto } from '$app/navigation';
 
   let avatar = '/avatar.png';
   let loading = true;
   let error = null;
+  let isAuthenticated = false;
+  let selectedEventId = 0;
+  let isRegistering = false;
   
   interface Event {
     id: number;
@@ -13,7 +19,11 @@
     tag: string;
     fullDescription: string;
     start_date?: string;
+    end_date?: string;
     created_at?: string;
+    is_registered?: boolean;
+    current_participants?: number;
+    max_participants?: number;
   }
 
   // Тестовые данные как запасной вариант
@@ -25,11 +35,55 @@
   // URL нашего API
   const API_URL = 'http://localhost:8000';
   
+  // Функция для форматирования даты
+  function formatDate(dateString: string): string {
+    if (!dateString) return '';
+    
+    const date = new Date(dateString);
+    
+    // Получаем день и месяц
+    const day = date.getDate().toString().padStart(2, '0');
+    
+    // Массив с названиями месяцев
+    const months = [
+      'января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
+      'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'
+    ];
+    const month = months[date.getMonth()];
+    
+    return `${day} ${month}`;
+  }
+  
+  // Функция для сравнения дат (только день и месяц)
+  function areSameDates(date1: string, date2: string): boolean {
+    if (!date1 || !date2) return false;
+    
+    const d1 = new Date(date1);
+    const d2 = new Date(date2);
+    
+    return d1.getDate() === d2.getDate() && d1.getMonth() === d2.getMonth();
+  }
+  
   // Функция для загрузки данных
   async function loadEvents() {
     try {
       loading = true;
-      const response = await fetch(`${API_URL}/events/afisha`);
+      error = null;
+      
+      // Получаем статус аутентификации
+      const unsubscribe = authStore.isAuthenticated.subscribe(value => {
+        isAuthenticated = value;
+      });
+      unsubscribe();
+      
+      // URL для загрузки данных
+      let url = `${API_URL}/events/afisha`;
+      
+      const response = await fetch(url, {
+        headers: isAuthenticated ? {
+          'Authorization': `Bearer ${getToken()}`
+        } : {}
+      });
       
       if (!response.ok) {
         throw new Error(`Ошибка HTTP: ${response.status}`);
@@ -37,7 +91,29 @@
       
       const data = await response.json();
       events = data;
-      error = null;
+      
+      // Если пользователь авторизован, получаем дополнительную информацию о событиях
+      if (isAuthenticated) {
+        await Promise.all(events.map(async (event) => {
+          try {
+            const detailResponse = await fetch(`${API_URL}/events/${event.id}`, {
+              headers: {
+                'Authorization': `Bearer ${getToken()}`
+              }
+            });
+            
+            if (detailResponse.ok) {
+              const detailData = await detailResponse.json();
+              event.is_registered = detailData.is_registered;
+              event.current_participants = detailData.current_participants;
+              event.max_participants = detailData.max_participants;
+            }
+          } catch (e) {
+            console.error(`Не удалось получить детали для события ${event.id}:`, e);
+          }
+        }));
+      }
+      
     } catch (err) {
       console.error('Ошибка при загрузке событий:', err);
       error = err.message;
@@ -50,7 +126,12 @@
           image: '/event1.png',
           tag: '#Универсиада',
           fullDescription: 'Полное описание Универсиады «Ломоносов» 2025',
-          created_at: '2023-05-15T10:00:00'
+          start_date: '2025-03-15T10:00:00',
+          end_date: '2025-03-20T18:00:00',
+          created_at: '2023-05-15T10:00:00',
+          is_registered: false,
+          current_participants: 42,
+          max_participants: 100
         },
         {
           id: 2,
@@ -59,12 +140,88 @@
           image: '/event2.png',
           tag: '#Университетская жизнь',
           fullDescription: 'Полное описание путёвок в здравницы МГУ',
-          created_at: '2023-06-20T10:00:00'
+          start_date: '2025-02-20T09:00:00',
+          end_date: '2025-04-30T18:00:00',
+          created_at: '2023-06-20T10:00:00',
+          is_registered: false,
+          current_participants: 15,
+          max_participants: 50
         }
       ];
     } finally {
       loading = false;
       sortEvents();
+    }
+  }
+  
+  // Получение токена авторизации
+  function getToken(): string {
+    let token = '';
+    authStore.token.subscribe(value => {
+      token = value || '';
+    })();
+    return token;
+  }
+  
+  // Регистрация на событие
+  async function handleRegister(eventId: number) {
+    try {
+      if (!isAuthenticated) {
+        goto('/login?redirect=/afisha');
+        return;
+      }
+      
+      isRegistering = true;
+      selectedEventId = eventId;
+      
+      const result = await registerForEvent(eventId);
+      
+      if (result.success) {
+        // Обновляем статус регистрации в списке событий
+        const eventIndex = events.findIndex(e => e.id === eventId);
+        if (eventIndex !== -1) {
+          events[eventIndex].is_registered = true;
+          if (events[eventIndex].current_participants !== undefined) {
+            events[eventIndex].current_participants += 1;
+          }
+          events = [...events]; // Для обновления UI
+        }
+      }
+    } catch (err: any) {
+      console.error('Ошибка при регистрации:', err);
+    } finally {
+      isRegistering = false;
+    }
+  }
+  
+  // Отмена регистрации на событие
+  async function handleUnregister(eventId: number) {
+    try {
+      if (!isAuthenticated) {
+        goto('/login?redirect=/afisha');
+        return;
+      }
+      
+      isRegistering = true;
+      selectedEventId = eventId;
+      
+      const result = await unregisterFromEvent(eventId);
+      
+      if (result.success) {
+        // Обновляем статус регистрации в списке событий
+        const eventIndex = events.findIndex(e => e.id === eventId);
+        if (eventIndex !== -1) {
+          events[eventIndex].is_registered = false;
+          if (events[eventIndex].current_participants !== undefined && events[eventIndex].current_participants > 0) {
+            events[eventIndex].current_participants -= 1;
+          }
+          events = [...events]; // Для обновления UI
+        }
+      }
+    } catch (err: any) {
+      console.error('Ошибка при отмене регистрации:', err);
+    } finally {
+      isRegistering = false;
     }
   }
   
@@ -116,8 +273,6 @@
 
       {#if loading}
         <div class="loading">Загрузка событий...</div>
-      {:else if error}
-        <div class="error">Ошибка: {error}</div>
       {:else}
         <div class="events-list">
           {#each events as event}
@@ -128,8 +283,52 @@
               <div class="event-content">
                 <div class="event-tag">{event.tag}</div>
                 <h3 class="event-title">{event.title}</h3>
+                {#if event.start_date && event.end_date}
+                  <div class="event-dates">
+                    {#if areSameDates(event.start_date, event.end_date)}
+                      {formatDate(event.start_date)}
+                    {:else}
+                      {formatDate(event.start_date)} - {formatDate(event.end_date)}
+                    {/if}
+                  </div>
+                {/if}
                 <p class="event-description">{event.description}</p>
-                <button class="details-button">Подробнее</button>
+                
+                {#if isAuthenticated && event.max_participants !== undefined}
+                  <div class="participants-info">
+                    <div class="participants-count">
+                      Участники: {event.current_participants} из {event.max_participants}
+                    </div>
+                  </div>
+                  
+                  <div class="registration-container">
+                    {#if event.is_registered}
+                      <button 
+                        class="unregister-button" 
+                        on:click={() => handleUnregister(event.id)}
+                        disabled={isRegistering && selectedEventId === event.id}
+                      >
+                        {isRegistering && selectedEventId === event.id ? 'Отмена регистрации...' : 'Отменить регистрацию'}
+                      </button>
+                    {:else if event.current_participants < event.max_participants}
+                      <button 
+                        class="register-button" 
+                        on:click={() => handleRegister(event.id)}
+                        disabled={isRegistering && selectedEventId === event.id}
+                      >
+                        {isRegistering && selectedEventId === event.id ? 'Регистрация...' : 'Зарегистрироваться'}
+                      </button>
+                    {:else}
+                      <button class="register-button disabled" disabled>
+                        Мест больше нет
+                      </button>
+                    {/if}
+                  </div>
+                {:else}
+                  <div class="unauthorized-message">
+                    <a href="/login?redirect=/afisha" class="login-button">Войдите, чтобы зарегистрироваться</a>
+                  </div>
+                {/if}
               </div>
             </div>
           {/each}
@@ -194,10 +393,11 @@
   }
 
   .main-title {
-    font-size: 36px;
+    font-size: 42px;
     font-weight: 600;
     margin-bottom: 30px;
     line-height: 1.2;
+    text-align: left;
   }
 
   /* Filters */
@@ -205,6 +405,7 @@
     display: flex;
     gap: 30px;
     margin-bottom: 30px;
+    justify-content: flex-start;
   }
 
   .filter-group {
@@ -214,7 +415,7 @@
   }
 
   .filter-group label {
-    font-size: 14px;
+    font-size: 16px;
     color: #666;
   }
 
@@ -275,6 +476,7 @@
     min-height: 210px;
     display: flex;
     flex-direction: column;
+    text-align: left;
   }
 
   .event-tag {
@@ -283,42 +485,115 @@
     color: white;
     padding: 5px 12px;
     border-radius: 15px;
-    font-size: 12px;
+    font-size: 14px;
     margin-bottom: 15px;
     align-self: flex-start;
   }
 
   .event-title {
-    font-size: 24px;
+    font-size: 28px;
     font-weight: 600;
-    margin: 0 0 15px 0;
+    margin: 0 0 5px 0;
     line-height: 1.3;
+    text-align: left;
+  }
+
+  .event-dates {
+    margin-bottom: 10px;
+    color: #666;
+    font-size: 16px;
   }
 
   .event-description {
     color: #444;
     line-height: 1.5;
+    margin-top: 5px;
     margin-bottom: 20px;
     flex-grow: 1;
+    font-size: 18px;
+    text-align: left;
   }
   
-  .details-button {
+  /* Participants info */
+  .participants-info {
+    margin-bottom: 15px;
+    align-self: flex-start;
+  }
+  
+  .participants-count {
+    font-size: 16px;
+    color: #777;
+    text-align: left;
+    margin-bottom: 10px;
+  }
+  
+  .registration-container {
+    display: flex;
+    justify-content: flex-start;
+  }
+  
+  .register-button, .unregister-button, .login-button {
+    padding: 10px 24px;
+    border-radius: 12px;
+    font-size: 16px;
+    cursor: pointer;
+    border: none;
+    transition: background-color 0.2s;
+    display: inline-block;
+    text-align: center;
+  }
+  
+  .register-button {
     background-color: #1A3882;
     color: white;
-    border: none;
-    padding: 8px 20px;
-    border-radius: 12px;
-    font-size: 14px;
-    cursor: pointer;
-    align-self: flex-end;
-    margin-top: auto;
-    transition: background-color 0.2s;
   }
-
-  .details-button:hover {
+  
+  .register-button:hover {
     background-color: #132a62;
   }
+  
+  .register-button.disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+  }
+  
+  .unregister-button {
+    background-color: #f0f0f0;
+    color: #cc0000;
+    border: 1px solid #cc0000;
+  }
+  
+  .unregister-button:hover {
+    background-color: #ffebeb;
+  }
+  
+  .unauthorized-message {
+    display: flex;
+    justify-content: flex-start;
+  }
+  
+  .login-button {
+    background-color: #f5f5f5;
+    color: #1A3882;
+    border: 1px solid #1A3882;
+    text-decoration: none;
+  }
+  
+  .login-button:hover {
+    background-color: #e8e8e8;
+  }
 
+  /* Notifications */
+  .loading {
+    padding: 15px;
+    margin-bottom: 30px;
+    border-radius: 8px;
+    position: relative;
+    text-align: left;
+    font-size: 18px;
+    background-color: #f5f5f5;
+  }
+  
   @media (max-width: 768px) {
     .event-card {
       flex-direction: column;
@@ -350,27 +625,15 @@
     }
     
     .main-title {
-      font-size: 28px;
+      font-size: 32px;
     }
     
     .event-title {
-      font-size: 20px;
+      font-size: 24px;
     }
-  }
-
-  .loading, .error {
-    padding: 20px;
-    text-align: center;
-    margin: 30px 0;
-    border-radius: 12px;
-  }
-
-  .loading {
-    background-color: #f5f5f5;
-  }
-
-  .error {
-    background-color: #ffdddd;
-    color: #cc0000;
+    
+    .registration-container {
+      justify-content: flex-start;
+    }
   }
 </style> 
