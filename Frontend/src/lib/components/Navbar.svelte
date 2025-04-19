@@ -48,7 +48,7 @@
   }
 
   .nav-button {
-    background-color: #f0f0f0;
+    background-color: #d6d6d6;
     border: none;
     border-radius: 20px;
     padding: 8px 16px;
@@ -62,7 +62,7 @@
   }
 
   .nav-button:hover {
-    background-color: #e0e0e0;
+    background-color: #d6d6d6;
   }
 
   .icon {
@@ -97,7 +97,7 @@
   }
 
   .nav-button.active {
-    background-color: #a8a8a8;
+    background-color: #9e9e9e;
     font-weight: 500;
   }
 

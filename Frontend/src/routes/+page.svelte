@@ -91,7 +91,8 @@
     },
     {
       title: 'Отзывы\nо преподавателях',
-      image: '/main_page/cute smiling star.png'
+      image: '/main_page/cute smiling star.png',
+      link: '/reviews'
     },
     {
       title: 'Пропуск\nна машину',
