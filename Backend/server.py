@@ -21,6 +21,7 @@ app.add_middleware(
 os.makedirs("static", exist_ok=True)
 os.makedirs("static/uploads", exist_ok=True)
 os.makedirs("static/uploads/gallery", exist_ok=True)
+os.makedirs("static/uploads/posts", exist_ok=True)
 
 # Подключаем статические файлы
 app.mount("/static", StaticFiles(directory="static"), name="static")
