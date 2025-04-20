@@ -124,13 +124,14 @@ class Event(EventBase):
 
 class CommentBase(BaseModel):
     content: str
-    author_id: int
+    author_id: Optional[int] = None
 
 
 class Comment(CommentBase):
     id: int
     created_at: datetime
     updated_at: Optional[datetime] = None
+    author: Optional[AuthorInfo] = None
 
     class Config:
         orm_mode = True
@@ -157,10 +158,16 @@ class PostCreate(PostBase):
     pass
 
 
+class AuthorInfo(BaseModel):
+    id: int
+    username: str
+
+
 class Post(PostBase):
     id: int
     created_at: datetime
     updated_at: Optional[datetime] = None
+    author: Optional[AuthorInfo] = None
     likes: List[int] = []
     comments: List[Comment] = []
 

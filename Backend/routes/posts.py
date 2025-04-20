@@ -9,7 +9,7 @@ import shutil
 from pathlib import Path
 
 from models import PostDB, UserDB, CommentDB
-from schemas import Post, PostCreate, Comment, CommentBase, Category
+from schemas import Post, PostCreate, Comment, CommentBase, Category, AuthorInfo
 from dependencies import get_db, get_current_active_user, convert_to_db_types
 
 post_router = APIRouter(prefix="/posts", tags=["Posts"])
@@ -35,12 +35,19 @@ def convert_post_db_to_schema(post_db: PostDB) -> Post:
     # Extract the user IDs from the likes relationship
     like_ids = [user.id for user in post_db.likes] if post_db.likes else []
     
+    # Информация об авторе поста
+    author_data = {
+        "id": post_db.author_id,
+        "username": post_db.author.username if post_db.author else "Неизвестный пользователь"
+    }
+    
     # Create a Post object with the right format for likes
     post_dict = {
         "id": post_db.id,
         "title": post_db.title,
         "content": post_db.content,
         "author_id": post_db.author_id,
+        "author": author_data,  # Добавляем информацию об авторе
         "photo_url": post_db.photo_url,
         "category": post_db.category,
         "created_at": post_db.created_at,
@@ -272,10 +279,35 @@ async def create_comment(post_id: int, comment: CommentBase, current_user: UserD
     if db_post is None:
         raise HTTPException(status_code=404, detail="Post not found")
     
+    # Конвертируем данные комментария и устанавливаем author_id принудительно
     comment_dict = convert_to_db_types(comment)
     
-    db_comment = CommentDB(**comment_dict, post_id=post_id, author_id=current_user.id)
+    # Создаем комментарий с ID текущего пользователя
+    db_comment = CommentDB(
+        content=comment_dict.get("content"),
+        post_id=post_id,
+        author_id=current_user.id
+    )
+    
     db.add(db_comment)
     db.commit()
     db.refresh(db_comment)
-    return db_comment 
+    
+    # Добавляем информацию об авторе в ответ
+    # Информация об авторе комментария
+    author_data = {
+        "id": current_user.id,
+        "username": current_user.username
+    }
+    
+    # Создаем объект Comment для ответа
+    response_comment = Comment(
+        id=db_comment.id,
+        content=db_comment.content,
+        author_id=db_comment.author_id,
+        author=AuthorInfo(**author_data),
+        created_at=db_comment.created_at,
+        updated_at=db_comment.updated_at
+    )
+    
+    return response_comment 

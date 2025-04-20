@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { menuService, type Dish, type DailyMenu } from '$lib/services/menu';
+  import { menuService, type Dish, type DailyMenu, getPhotoUrl } from '$lib/services/menu';
   
   // Store references
   const { dailyMenus, dishes, loading, error, fetchDailyMenus, fetchDishes, fetchDishesForMenu } = menuService;
@@ -71,8 +71,8 @@
     return {
       id: dish.id,
       name: dish.name,
-      // Use dish photo if available, otherwise fallback to static images
-      image: dish.photo ? `/static/${dish.photo}` : `/menu1(${Math.floor(Math.random() * 3) + 1}).png`,
+      // Use getPhotoUrl helper to generate correct URL
+      image: dish.photo ? getPhotoUrl(dish.photo) : `/menu1(${Math.floor(Math.random() * 3) + 1}).png`,
       calories: `Калории: ${dish.kilocalories || 0} ккал.`,
       nutrients: `Белки: ${dish.proteins || 0} гр. Жиры: ${dish.fats || 0} гр. Углеводы: ${dish.carbohydrates || 0} гр.`
     };
@@ -171,29 +171,26 @@
     }));
   }
   
-  // Функция выбора продукта
+  // Функция выбора продукта с обновлением UI
   function selectProduct(dayIndex: number, productIndex: number) {
+    // Обновляем выбранный индекс
     daysMenu[dayIndex].selectedProductIndex = productIndex;
-  }
-  
-  let currentHitIndex = 0;
-  
-  function prevHit() {
-    if (currentHitIndex > 0) {
-      currentHitIndex--;
-    } else {
-      currentHitIndex = weeklyHits.length - 1;
+    
+    // Если это сегодняшний день, обновляем и todayMenu
+    if (daysMenu[dayIndex].isToday && todayMenu) {
+      todayMenu.selectedProductIndex = productIndex;
+    }
+    
+    // Форсируем обновление переменных для реактивности
+    daysMenu = [...daysMenu];
+    if (todayMenu) {
+      todayMenu = {...todayMenu};
     }
   }
   
-  function nextHit() {
-    if (currentHitIndex < weeklyHits.length - 1) {
-      currentHitIndex++;
-    } else {
-      currentHitIndex = 0;
-    }
-  }
-  
+  let currentHitIndex = 0; // Оставим на случай, если потребуется в будущем
+  let tickerSpeed = 30; // секунд для полного прохода
+
   // Function to initialize the menu data
   async function initializeMenuData() {
     // Fetch menus data from API
@@ -207,19 +204,22 @@
     // Initialize menu data
     initializeMenuData();
     
-    // Автоматическое пролистывание карусели каждые 5 секунд
-    const interval = setInterval(() => {
-      nextHit();
-    }, 5000);
+    // Устанавливаем начальную продолжительность анимации
+    const ticker = document.querySelector('.ticker');
+    if (ticker) {
+      ticker.style.animationDuration = `${tickerSpeed}s`;
+    }
     
     return () => {
-      clearInterval(interval);
+      // Ничего не нужно очищать
     };
   });
 </script>
 
 <div class="container">
-  <h1 class="menu-title">Меню столовой</h1>
+  <div class="header-section">
+    <h1 class="menu-title">Меню столовой</h1>
+  </div>
 
   {#if $loading}
     <div class="loading">Загрузка меню...</div>
@@ -234,7 +234,7 @@
       {#if todayMenu}
         <!-- Today's menu highlight -->
         <div class="today-menu">
-          <h2 class="today-title">Сегодняшнее меню <span class="today-icon">🍽️</span></h2>
+          <h2 class="today-title">Сегодняшнее меню</h2>
           <div class="day-card today-card">
             <div class="day-info">
               <div class="calendar-icon today-calendar">
@@ -277,7 +277,8 @@
       {#if daysMenu.some(day => !day.isToday)}
         <div class="daily-menu">
           <h2 class="section-title">Меню на другие дни</h2>
-          {#each daysMenu.filter(day => !day.isToday) as day, dayIndex}
+          {#each daysMenu.filter(day => !day.isToday) as day, filteredDayIndex}
+            {@const dayIndex = daysMenu.findIndex(d => d.menuId === day.menuId)}
             <div class="day-card">
               <div class="day-info">
                 <div class="calendar-icon">
@@ -317,12 +318,16 @@
         Хиты недели <span class="lightning-icon">⚡</span>
       </h2>
       
-      <div class="hits-grid">
-        {#each weeklyHits as hit}
-          <div class="hit-card">
-            <img src={hit.image} alt={hit.title} class="hit-image">
-          </div>
-        {/each}
+      <div class="ticker-container">
+        <div class="ticker">
+          {#each [...weeklyHits, ...weeklyHits] as hit, i}
+            <div class="ticker-item">
+              <div class="hit-card">
+                <img src={hit.image} alt={hit.title} class="hit-image">
+              </div>
+            </div>
+          {/each}
+        </div>
       </div>
     </div>
   {/if}
@@ -337,12 +342,33 @@
     position: relative;
   }
 
-  /* Основные стили для страницы меню */
+  /* Секция заголовка */
+  .header-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 40px 0 50px;
+    position: relative;
+    padding-bottom: 10px;
+  }
+
+  /* Основные стили для заголовка страницы меню */
   .menu-title {
-    font-size: 32px;
-    margin: 20px 0;
-    color: #333;
+    font-size: 38px;
+    color: #222;
     text-align: center;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    margin: 0;
+    position: relative;
+  }
+
+  .header-line {
+    height: 3px;
+    width: 150px;
+    background: linear-gradient(to right, rgba(51,51,51,0.1), rgba(51,51,51,0.8), rgba(51,51,51,0.1));
+    margin-top: 15px;
+    border-radius: 2px;
   }
   
   /* Loading and error states */
@@ -370,33 +396,42 @@
   
   /* Today's menu highlight */
   .today-menu {
-    margin: 30px 0;
+    margin: 40px 0 30px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    width: 100%;
   }
   
   .today-title {
-    font-size: 26px;
-    margin-bottom: 15px;
-    color: #4CAF50;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-  
-  .today-icon {
-    font-size: 24px;
+    font-size: 28px;
+    margin-bottom: 20px;
+    color: #000000;
+    font-weight: 600;
+    text-align: left;
+    letter-spacing: 0.5px;
+    position: relative;
+    padding-left: 0;
+    margin-left: 0;
   }
   
   .today-card {
-    border: 2px solid #4CAF50;
-    background-color: #f8fff8;
+    border: 2px solid #e0e0e0;
+    background-color: #ffffff;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+    width: 100%;
+    max-width: 1100px;
+    border-radius: 15px;
+    margin-top: 5px;
   }
   
   .today-calendar {
-    background-color: #4CAF50;
+    background-color: #333;
   }
   
   .today-product {
-    background-color: #f1f8e9;
+    background-color: #f5f5f5;
   }
   
   .product-image-container {
@@ -407,6 +442,8 @@
     display: flex;
     justify-content: center;
     align-items: center;
+    background-color: #f9f9f9;
+    border: 1px solid #eee;
   }
   
   /* Стили для раздела "Хиты недели" */
@@ -427,35 +464,91 @@
     font-size: 20px;
   }
   
-  /* Стили для грида хитов */
-  .hits-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 30px;
+  /* Стили для бегущей строки "Хиты недели" */
+  .ticker-container {
+    width: 100%;
+    overflow: hidden;
+    position: relative;
+    padding: 20px 0;
     margin-bottom: 30px;
-    max-width: 900px;
-    margin-left: auto;
-    margin-right: auto;
+    background-color: #f8f8f8;
+    border-radius: 15px;
+    box-shadow: inset 0 0 15px rgba(0,0,0,0.05);
+  }
+  
+  .ticker-container:before,
+  .ticker-container:after {
+    content: "";
+    position: absolute;
+    top: 0;
+    width: 150px;
+    height: 100%;
+    z-index: 2;
+    pointer-events: none;
+  }
+  
+  .ticker-container:before {
+    left: 0;
+    background: linear-gradient(to right, #f8f8f8, rgba(248, 248, 248, 0));
+  }
+  
+  .ticker-container:after {
+    right: 0;
+    background: linear-gradient(to left, #f8f8f8, rgba(248, 248, 248, 0));
+  }
+  
+  .ticker {
+    display: flex;
+    animation: ticker-scroll 30s linear infinite;
+    width: max-content;
+    padding: 10px 0;
+  }
+  
+  .ticker-item {
+    padding: 0 25px;
+    flex-shrink: 0;
   }
   
   .hit-card {
-    aspect-ratio: auto;
-    background-color: transparent;
-    border-radius: 0;
-    overflow: visible;
-    position: relative;
+    width: 320px;
     display: flex;
-    justify-content: center;
+    flex-direction: column;
     align-items: center;
-    max-width: 280px;
-    margin: 0 auto;
+    background-color: white;
+    border-radius: 12px;
+    padding: 10px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border: 2px solid transparent;
+    overflow: hidden;
+    position: relative;
+  }
+  
+  .hit-card:hover {
+    transform: translateY(-10px) scale(1.02);
+    box-shadow: 0 15px 30px rgba(0,0,0,0.15);
+    border-color: rgba(76, 175, 80, 0.3);
   }
   
   .hit-image {
     width: 100%;
-    height: auto;
-    object-fit: contain;
-    max-height: 280px;
+    height: 240px;
+    object-fit: cover;
+    border-radius: 8px;
+  }
+  
+  @keyframes ticker-scroll {
+    0% {
+      transform: translateX(0);
+    }
+    100% {
+      transform: translateX(-50%);
+    }
+  }
+  
+  /* Приостанавливаем анимацию при наведении */
+  .ticker-container:hover .ticker {
+    animation-play-state: paused;
   }
   
   /* Стили для дневного меню */
@@ -480,6 +573,7 @@
     display: flex;
     align-items: center;
     gap: 20px;
+    padding: 10px 15px;
   }
   
   .calendar-icon {
@@ -492,6 +586,7 @@
     align-items: center;
     justify-content: center;
     font-weight: bold;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.1);
   }
   
   .calendar-icon:before {
@@ -511,18 +606,19 @@
   .meal-info {
     display: flex;
     flex-direction: column;
-    gap: 5px;
+    gap: 6px;
   }
   
   .dish-title {
     font-size: 24px;
     margin: 0;
     font-weight: bold;
+    color: #333;
   }
   
   .price-info {
     margin: 0;
-    color: #4CAF50;
+    color: #333;
     font-size: 16px;
     font-weight: bold;
   }
@@ -542,8 +638,14 @@
   .products-row {
     display: flex;
     gap: 20px;
-    justify-content: flex-end;
-    flex-wrap: wrap;
+    justify-content: flex-start;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scroll-behavior: smooth;
+    padding: 10px 0;
+    margin: 0 -10px;
+    scrollbar-width: thin;
+    padding-bottom: 20px;
   }
   
   .product-item {
@@ -555,16 +657,46 @@
     padding: 8px;
     border-radius: 8px;
     cursor: pointer;
-    transition: background-color 0.2s ease;
+    transition: all 0.3s ease;
     width: 110px;
     height: 120px;
     position: relative;
+    margin: 0 5px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border: 2px solid transparent;
+  }
+  
+  .product-item:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    border-color: #4CAF50;
   }
   
   .product-image {
     width: 100%;
     height: 100%;
     object-fit: cover;
+    transition: transform 0.3s ease;
+  }
+  
+  .product-item:hover .product-image {
+    transform: scale(1.1);
+  }
+  
+  .product-item.selected {
+    background-color: #2F4F2F; /* Темно-зеленый цвет */
+    border-color: #2F4F2F;
+    transform: translateY(-5px);
+    box-shadow: 0 5px 15px rgba(47,79,47,0.3);
+  }
+  
+  .product-item.selected .product-name {
+    color: white;
+    background-color: rgba(47, 79, 47, 0.8); /* Темно-зеленый с прозрачностью */
+  }
+  
+  .product-item.selected .product-image {
+    transform: scale(1.05);
   }
   
   .product-name {
@@ -576,25 +708,22 @@
     background-color: rgba(255, 255, 255, 0.7);
     padding: 2px 5px;
     border-radius: 4px;
-  }
-  
-  .product-item.selected {
-    background-color: #465E44;
-  }
-  
-  .product-item.selected .product-name {
-    color: white;
-    background-color: rgba(70, 94, 68, 0.8);
+    transition: all 0.3s ease;
   }
   
   /* Адаптивность */
   @media (max-width: 768px) {
-    .hits-grid {
-      grid-template-columns: 1fr;
+    .hit-card {
+      width: 280px;
+      height: auto;
     }
     
-    .hit-card {
+    .hit-image {
       height: 200px;
+    }
+    
+    .ticker-item {
+      padding: 0 15px;
     }
     
     .day-card {
@@ -606,6 +735,53 @@
     .products-row {
       width: 100%;
       justify-content: space-between;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .ticker-container {
+      padding: 15px 0;
+    }
+    
+    .hit-card {
+      width: 240px;
+    }
+    
+    .hit-image {
+      height: 180px;
+    }
+  }
+
+  /* Скрываем стандартный скроллбар в Chrome */
+  .products-row::-webkit-scrollbar {
+    height: 4px;
+  }
+
+  .products-row::-webkit-scrollbar-track {
+    background: #f1f1f1;
+  }
+
+  .products-row::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 10px;
+  }
+
+  .products-row::-webkit-scrollbar-thumb:hover {
+    background: #555;
+  }
+
+  /* Адаптивность для заголовка */
+  @media (max-width: 768px) {
+    .header-section {
+      margin: 30px 0 40px;
+    }
+    
+    .menu-title {
+      font-size: 32px;
+    }
+    
+    .header-line {
+      width: 120px;
     }
   }
 </style>

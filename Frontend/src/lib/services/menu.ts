@@ -31,6 +31,17 @@ export interface DailyMenu {
 // API URL
 const API_URL = 'http://localhost:8000';
 
+// Function to get full photo URL
+export function getPhotoUrl(photoPath: string | undefined): string {
+  if (!photoPath) return '';
+  // If photo path already includes http, return as is
+  if (photoPath.startsWith('http')) return photoPath;
+  // If photo path starts with "/", assume it's a local path
+  if (photoPath.startsWith('/')) return photoPath;
+  // Otherwise, append to API URL
+  return `${API_URL}/static/${photoPath}`;
+}
+
 // Create stores
 const dailyMenus = writable<DailyMenu[]>([]);
 const dishes = writable<Dish[]>([]);
