@@ -41,6 +41,7 @@
     padding: 0;
     margin: 0;
     padding-top: 10px;
+    margin-top: 1%;
     width: 100%;
   }
 

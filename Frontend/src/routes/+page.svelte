@@ -121,6 +121,18 @@
       title: 'Вступить\nв профком',
       image: '/main_page/two speech bubbles.png',
       link: 'https://lk.msuprof.com/'
+    },
+    {
+      title: 'Бронирование',
+      image: '/main_page/cute bookmark.png'
+    },
+    {
+      title: 'To-do\nлист',
+      image: '/main_page/cute lamp.png'
+    },
+    {
+      title: 'Психолог',
+      image: '/main_page/happy emoji with hearts.png'
     }
   ];
   
