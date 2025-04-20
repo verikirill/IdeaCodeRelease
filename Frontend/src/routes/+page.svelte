@@ -82,7 +82,8 @@
     },
     {
       title: 'Бюро\nнаходок',
-      image: '/main_page/search cute blue icon.png'
+      image: '/main_page/search cute blue icon.png',
+      link: '/forum'
     },
     {
       title: 'Меню\nстоловой',
@@ -91,7 +92,8 @@
     },
     {
       title: 'Мемы\nот студентов',
-      image: '/main_page/emoji with tongue.png'
+      image: '/main_page/emoji with tongue.png',
+      link: '/forum'
     },
     {
       title: 'Отзывы\nо преподавателях',
@@ -100,19 +102,23 @@
     },
     {
       title: 'Пропуск\nна машину',
-      image: '/main_page/document file with code symbol.png'
+      image: '/main_page/document file with code symbol.png',
+      link: 'https://app.profcomff.com/apps/7'
     },
     {
       title: 'Калькулятор\nстипендий',
-      image: '/main_page/banknotes.png'
+      image: '/main_page/banknotes.png',
+      link: 'https://app.profcomff.com/apps/39'
     },
     {
       title: 'Бесплатный\nпринтер',
-      image: '/main_page/cash receipt.png'
+      image: '/main_page/cash receipt.png',
+      link: 'https://app.profcomff.com/apps/1'
     },
     {
       title: 'Вступить\nв профком',
-      image: '/main_page/two speech bubbles.png'
+      image: '/main_page/two speech bubbles.png',
+      link: 'https://lk.msuprof.com/'
     }
   ];
   
