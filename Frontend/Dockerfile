@@ -13,4 +13,9 @@ WORKDIR /app
 COPY --from=builder /app/build ./build
 COPY --from=builder /app/node_modules ./node_modules
 COPY package.json .
+
+# Expose port
+EXPOSE 3000
+
+# Start the server
 CMD ["node", "./build"]

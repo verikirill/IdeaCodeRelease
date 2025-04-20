@@ -6,11 +6,11 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# PostgreSQL connection parameters
-DB_HOST = "188.225.58.188"
-DB_NAME = "users"
-DB_USER = "admin"
-DB_PASSWORD = "z$27^7tvmsJs"
+# PostgreSQL connection parameters from environment variables
+DB_HOST = os.getenv("DB_HOST", "localhost")
+DB_NAME = os.getenv("DB_NAME", "users")
+DB_USER = os.getenv("DB_USER", "admin")
+DB_PASSWORD = os.getenv("DB_PASSWORD", "z$27^7tvmsJs")
 
 # Create SQLAlchemy connection URL
 SQLALCHEMY_DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}/{DB_NAME}"
