@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { browser } from '$app/environment';
+  import { authStore } from '$lib/services/auth';
 
   interface Comment {
     id: number;
@@ -39,6 +40,7 @@
   let isLoggedIn = false;
   let authError = '';
   let token = '';
+  let currentUser: any = null;
   
   let posts: Post[] = [];
   let newPostTitle = '';
@@ -77,34 +79,30 @@
     showNewPostForm = !showNewPostForm;
   }
 
-  // Get auth token directly - try different possible keys
+  // Подписываемся на изменения в authStore
+  authStore.token.subscribe((value) => {
+    token = value || '';
+    isLoggedIn = !!value;
+    console.log('Auth token updated:', !!token);
+  });
+
+  authStore.user.subscribe((value) => {
+    currentUser = value;
+    console.log('Current user updated:', currentUser?.username);
+  });
+
+  // Get auth token only from cookies
   function getAuthToken(): string {
     if (browser) {
-      // Try the standard key first (from auth.ts)
-      const accessToken = localStorage.getItem('access_token');
-      if (accessToken) {
-        console.log('Found access_token in localStorage');
-        return accessToken;
-      }
+      // Получаем токен только из куки
+      const cookieToken = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('access_token='))
+        ?.split('=')[1];
       
-      // Fallback to other possible keys
-      const possibleKeys = ['token', 'auth_token', 'Bearer'];
-      
-      for (const key of possibleKeys) {
-        const value = localStorage.getItem(key);
-        if (value) {
-          console.log(`Found token in localStorage with key: ${key}`);
-          return value;
-        }
-      }
-      
-      // If we're here, we need to check for JWT format tokens that might be stored directly
-      for (const key of Object.keys(localStorage)) {
-        const value = localStorage.getItem(key);
-        if (value && value.split('.').length === 3) {
-          console.log(`Found what looks like a JWT token in localStorage with key: ${key}`);
-          return value;
-        }
+      if (cookieToken) {
+        console.log('Found token in cookies');
+        return cookieToken;
       }
     }
     return '';
@@ -115,6 +113,29 @@
     const token = getAuthToken();
     console.log("Auth token found:", !!token);
     return !!token;
+  }
+
+  // Устанавливаем обработчик ошибок авторизации
+  function handleAuthError(status: number): boolean {
+    if (status === 401 || status === 403) {
+      authError = 'Необходимо войти в систему. Пожалуйста, авторизуйтесь.';
+      console.log('Redirecting to login page...');
+      
+      // Очищаем токен в куки при ошибке авторизации
+      if (browser) {
+        document.cookie = 'access_token=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;SameSite=Strict';
+        // Информируем authStore об изменении
+        authStore.token.set(null);
+      }
+      
+      // Добавляем небольшую задержку перед перенаправлением
+      setTimeout(() => {
+        window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
+      }, 500);
+      
+      return true;
+    }
+    return false;
   }
 
   async function fetchPosts() {
@@ -138,8 +159,10 @@
 
   async function handleSubmitPost() {
     try {
-      if (!isLoggedIn) {
+      // Обновляем проверку токена перед отправкой
+      if (!isLoggedIn || !token) {
         authError = 'Пожалуйста, войдите в систему, чтобы создать запись';
+        handleAuthError(401);
         return;
       }
       
@@ -241,8 +264,10 @@
 
   async function handleSubmitComment(postId: number) {
     try {
-      if (!isLoggedIn) {
+      // Обновляем проверку токена перед отправкой
+      if (!isLoggedIn || !token) {
         authError = 'Пожалуйста, войдите в систему, чтобы добавить комментарий';
+        handleAuthError(401);
         return;
       }
       
@@ -300,8 +325,10 @@
 
   async function handleLikePost(postId: number) {
     try {
-      if (!isLoggedIn) {
+      // Обновляем проверку токена перед отправкой
+      if (!isLoggedIn || !token) {
         authError = 'Пожалуйста, войдите в систему, чтобы поставить лайк';
+        handleAuthError(401);
         return;
       }
       
@@ -387,11 +414,46 @@
     return allPosts.filter(post => post.category === filter);
   }
   
-  onMount(() => {
-    isLoggedIn = checkAuth();
-    if (isLoggedIn) {
-      token = getAuthToken(); // Set the token from localStorage
+  onMount(async () => {
+    // Обновляем состояние аутентификации при загрузке страницы
+    token = getAuthToken();
+    isLoggedIn = !!token;
+    
+    // Если есть токен в куки, но нет в authStore, синхронизируем
+    if (token && !authStore.token) {
+      authStore.token.set(token);
     }
+    
+    // Если пользователь авторизован, обновляем данные пользователя
+    if (isLoggedIn && token && !currentUser) {
+      try {
+        const response = await fetch(`${API_URL}/users/me`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (response.ok) {
+          currentUser = await response.json();
+          console.log('User data loaded:', currentUser?.username);
+        } 
+        else if (response.status === 401) {
+          // Токен недействителен, сбрасываем состояние авторизации и куки
+          token = '';
+          isLoggedIn = false;
+          authStore.token.set(null);
+          document.cookie = 'access_token=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;SameSite=Strict';
+        }
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+      }
+    }
+    
+    // Добавляем вывод для отладки
+    console.log("isLoggedIn:", isLoggedIn);
+    console.log("token available:", !!token);
+    console.log("currentUser:", currentUser?.username);
+    
     fetchPosts();
   });
 </script>

@@ -71,7 +71,7 @@ function deleteCookie(name: string): void {
 
 // Инициализируем хранилища
 const createAuthStore = () => {
-  // Загружаем начальные значения из cookies (если в браузере)
+  // Загружаем начальные значения только из cookies
   const initialToken = browser ? getCookie('access_token') : null;
   const initialUser = browser ? JSON.parse(getCookie('user_data') || 'null') : null;
   
@@ -103,11 +103,18 @@ const createAuthStore = () => {
       
       const data: AuthResponse = await response.json();
       
-      // Сохраняем токен
+      // Сохраняем токен только в куки
       token.set(data.access_token);
       
       if (browser) {
         setCookie('access_token', data.access_token);
+        
+        // Удаляем токены из localStorage, чтобы обеспечить единый источник хранения
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('token');
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('Bearer');
+        localStorage.removeItem('jwt');
       }
       
       // Получаем данные пользователя после успешного логина
@@ -129,7 +136,15 @@ const createAuthStore = () => {
       })();
       
       if (!currentToken) {
-        return null;
+        // Попробуем получить токен из куки напрямую
+        currentToken = getCookie('access_token');
+        
+        if (currentToken) {
+          // Обновим store, если токен найден в куки
+          token.set(currentToken);
+        } else {
+          return null;
+        }
       }
       
       // Делаем запрос на сервер для получения данных пользователя
@@ -295,19 +310,25 @@ const createAuthStore = () => {
   
   // Функция для выхода
   function logout() {
-    token.set(null);
-    user.set(null);
-    
     if (browser) {
+      // Удаляем только куки
       deleteCookie('access_token');
       deleteCookie('user_data');
       
-      // Получаем текущий путь
-      const currentPath = window.location.pathname;
-      // Перенаправляем на страницу логина только если мы не на странице логина или регистрации
-      if (currentPath !== '/login' && currentPath !== '/register') {
-        goto('/login');
-      }
+      // Дополнительно очищаем localStorage от возможных токенов
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('token');
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('Bearer');
+      localStorage.removeItem('jwt');
+    }
+    
+    token.set(null);
+    user.set(null);
+    
+    // После успешного выхода перенаправляем на страницу логина
+    if (browser) {
+      goto('/login');
     }
   }
   
