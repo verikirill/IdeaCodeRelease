@@ -3,7 +3,7 @@
   import { goto } from '$app/navigation';
   
   function navigateToKnowledge() {
-    goto('/knowledge');
+    goto('/admin_panel/knowledge');
   }
   
   function navigateToEvents() {
