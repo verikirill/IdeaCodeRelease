@@ -11,6 +11,7 @@
   let prevStoryIndex = 0;
   let direction = 1; // 1 для вперед, -1 для назад
   let cardsReady = false; // Flag to control the animation of service cards
+  let storiesReady = false; // Flag to control the animation of story circles
   
   interface Story {
     id: number;
@@ -183,10 +184,15 @@
       }
     });
 
-    // Trigger animation for service cards after a short delay
+    // Animate stories first
     setTimeout(() => {
-      cardsReady = true;
-    }, 500);
+      storiesReady = true;
+      
+      // Then animate service cards after stories appear
+      setTimeout(() => {
+        cardsReady = true;
+      }, 600);
+    }, 300);
     
     return () => {
       // Отписаться при уничтожении компонента
@@ -198,14 +204,26 @@
 <div class="main-content">
   <div class="container">
     <main>
-      <h1 class="main-title">Твой ФФ - университет в одном клике.</h1>
+      <h1 class="main-title" 
+         in:fly={{ y: -30, duration: 600, delay: 100, easing: cubicOut }}>
+        Твой ФФ - университет в одном клике.
+      </h1>
 
       <!-- Main circular buttons -->
       <div class="circular-buttons">
         {#each stories as story, index}
-          <div class="circular-button" on:click={() => openStories(index)}>
-            <img src={story.image} alt={story.title} class="story-image">
-          </div>
+          {#if storiesReady}
+            <div class="circular-button" 
+                 in:fly={{ x: -50, y: 20, duration: 500, delay: index * 150, easing: cubicOut }}
+                 on:click={() => openStories(index)}>
+              <img src={story.image} alt={story.title} class="story-image"
+                   in:fade={{ duration: 300, delay: (index * 150) + 300 }}>
+            </div>
+          {:else}
+            <div class="circular-button circular-button-hidden">
+              <img src={story.image} alt={story.title} class="story-image">
+            </div>
+          {/if}
         {/each}
       </div>
 
@@ -403,6 +421,10 @@
     align-items: center;
     margin: 0 10px;
     cursor: pointer;
+  }
+  
+  .circular-button-hidden {
+    opacity: 0;
   }
 
   .story-image {
