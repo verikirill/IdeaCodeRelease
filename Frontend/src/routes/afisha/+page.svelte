@@ -404,8 +404,9 @@
 
   .afisha-page {
     width: 100%;
-    background-color: #ffffff;
     min-height: 100vh;
+    position: relative;
+    z-index: 1;
   }
 
   .container {
