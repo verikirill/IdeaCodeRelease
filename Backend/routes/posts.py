@@ -35,12 +35,19 @@ def convert_post_db_to_schema(post_db: PostDB) -> Post:
     # Extract the user IDs from the likes relationship
     like_ids = [user.id for user in post_db.likes] if post_db.likes else []
     
+    # Информация об авторе поста
+    author_data = {
+        "id": post_db.author_id,
+        "username": post_db.author.username if post_db.author else "Неизвестный пользователь"
+    }
+    
     # Create a Post object with the right format for likes
     post_dict = {
         "id": post_db.id,
         "title": post_db.title,
         "content": post_db.content,
         "author_id": post_db.author_id,
+        "author": author_data,  # Добавляем информацию об авторе
         "photo_url": post_db.photo_url,
         "category": post_db.category,
         "created_at": post_db.created_at,

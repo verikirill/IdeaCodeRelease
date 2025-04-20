@@ -157,10 +157,16 @@ class PostCreate(PostBase):
     pass
 
 
+class AuthorInfo(BaseModel):
+    id: int
+    username: str
+
+
 class Post(PostBase):
     id: int
     created_at: datetime
     updated_at: Optional[datetime] = None
+    author: Optional[AuthorInfo] = None
     likes: List[int] = []
     comments: List[Comment] = []
 

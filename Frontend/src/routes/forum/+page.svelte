@@ -215,6 +215,10 @@
         throw new Error(`HTTP error! Status: ${response.status}, Details: ${errorText}`);
       }
       
+      // Get the newly created post data
+      const newPostData = await response.json();
+      console.log("New post created:", newPostData);
+      
       // Reset form and refresh posts
       newPostTitle = '';
       newPostContent = '';
@@ -224,7 +228,8 @@
       showNewPostForm = false;
       authError = '';
       
-      await fetchPosts();
+      // Add the new post to the posts array and update filtered posts
+      posts = [newPostData, ...posts];
     } catch (err) {
       console.error('Error creating post:', err);
       alert('Не удалось создать пост. Пожалуйста, попробуйте позже.');
@@ -261,15 +266,26 @@
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
 
+      // Получаем данные нового комментария
+      const newComment = await response.json();
+      console.log("New comment added:", newComment);
+      
       newCommentText = '';
       authError = '';
-      await fetchPosts();
       
-      // Update the selected post with the latest data
-      if (selectedPost) {
-        const postResponse = await fetch(`${API_URL}/posts/${postId}`);
-        if (postResponse.ok) {
-          const updatedPost = await postResponse.json();
+      // Обновляем локально пост с новым комментарием
+      const postIndex = posts.findIndex(p => p.id === postId);
+      if (postIndex !== -1) {
+        const updatedPost = { ...posts[postIndex] };
+        updatedPost.comments = [...updatedPost.comments, newComment];
+        
+        // Создаем новый массив с обновленным постом
+        const updatedPosts = [...posts];
+        updatedPosts[postIndex] = updatedPost;
+        posts = updatedPosts;
+        
+        // Если у нас открыт выбранный пост, обновляем и его
+        if (selectedPost && selectedPost.id === postId) {
           selectedPost = updatedPost;
         }
       }
@@ -301,14 +317,21 @@
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
 
+      // Получаем обновленный пост
+      const updatedPost = await response.json();
       authError = '';
-      await fetchPosts();
       
-      // Update the selected post
-      if (selectedPost && selectedPost.id === postId) {
-        const postResponse = await fetch(`${API_URL}/posts/${postId}`);
-        if (postResponse.ok) {
-          selectedPost = await postResponse.json();
+      // Обновляем пост локально
+      const postIndex = posts.findIndex(p => p.id === postId);
+      if (postIndex !== -1) {
+        // Создаем новый массив с обновленным постом
+        const updatedPosts = [...posts];
+        updatedPosts[postIndex] = updatedPost;
+        posts = updatedPosts;
+        
+        // Если у нас открыт выбранный пост, обновляем и его
+        if (selectedPost && selectedPost.id === postId) {
+          selectedPost = updatedPost;
         }
       }
     } catch (err) {
@@ -430,9 +453,6 @@
                         <span class="meta-item date">
                           <img src="/mdi_calendar.svg" alt="Дата" /> {formatDate(post.created_at)}
                         </span>
-                        <span class="meta-item author">
-                          <img src="/user-icon.svg" alt="Автор" /> {post.author?.username || 'Аноним'}
-                        </span>
                         <span class="meta-item likes" on:click={() => handleLikePost(post.id)}>
                           <img src="main_page/like.svg" alt="Лайки" /> {post.likes?.length || 0}
                         </span>
@@ -441,6 +461,10 @@
                           {post.comments?.length === 1 ? 'ответ' : 
                            post.comments?.length >= 2 && post.comments?.length <= 4 ? 'ответа' : 'ответов'}
                         </span>
+                      </div>
+                      
+                      <div class="post-author">
+                        <img src="/user-icon.svg" alt="Автор" /> {post.author?.username || 'Аноним'}
                       </div>
                       
                       <button class="view-replies collapse" on:click={() => viewPost(post)}>Свернуть ответы</button>
@@ -496,9 +520,6 @@
                         <span class="meta-item date">
                           <img src="/mdi_calendar.svg" alt="Дата" /> {formatDate(post.created_at)}
                         </span>
-                        <span class="meta-item author">
-                          <img src="/user-icon.svg" alt="Автор" /> {post.author?.username || 'Аноним'}
-                        </span>
                         <span class="meta-item likes" on:click={() => handleLikePost(post.id)}>
                           <img src="main_page/like.svg" alt="Лайки" /> {post.likes?.length || 0}
                         </span>
@@ -508,9 +529,11 @@
                            post.comments?.length >= 2 && post.comments?.length <= 4 ? 'ответа' : 'ответов'}
                         </span>
                       </div>
+                      
                       <div class="post-author">
-                        Автор: {post.author?.username || 'Аноним'}
+                        <img src="/user-icon.svg" alt="Автор" /> {post.author?.username || 'Аноним'}
                       </div>
+                      
                       <button class="view-replies" on:click={() => viewPost(post)}>Комментарии</button>
                     </div>
                   </div>
@@ -1004,6 +1027,8 @@
     color: #fff;
     text-align: center;
     margin-left: 10%;
+    margin-top: 10px;
+    display: block;
   }
 
   /* Topics */
@@ -1374,16 +1399,42 @@
     border-radius: 8px;
   }
   
-  .meta-item.author {
+  /* Стиль для блока автора */
+  .post-author {
     display: flex;
     align-items: center;
-    margin-right: 15px;
+    gap: 8px;
+    font-size: 14px;
+    color: #666;
+    margin: 12px 0;
+    padding: 4px 0;
+    flex-wrap: nowrap;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .post-author img {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
   }
   
-  .meta-item.likes {
+  .view-replies {
+    background-color: #1A3882;
+    border: none;
+    border-radius: 12px;
+    padding: 8px 0;
+    width: 45%;
     cursor: pointer;
+    font-size: 14px;
+    color: #fff;
+    text-align: center;
+    margin-left: 10%;
+    margin-top: 10px;
+    display: block;
   }
-  
+
   /* File uploads */
   .file-upload {
     position: relative;
@@ -1611,24 +1662,5 @@
   
   .cancel-button:hover {
     background-color: #e9ecef;
-  }
-  
-  .post-author {
-    margin-top: 10px;
-    font-size: 14px;
-    color: #666;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-  }
-
-  .post-author:before {
-    content: '';
-    display: inline-block;
-    width: 12px;
-    height: 12px;
-    background-image: url('/user-icon.svg');
-    background-size: contain;
-    background-repeat: no-repeat;
   }
 </style>
