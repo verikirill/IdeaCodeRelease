@@ -441,13 +441,13 @@
                   <div class="user-avatar"></div>
                   <div class="post-content">
                       {#if post.photo_url}
-                        <div class="post-image-container">
+                        <div class="post-image-container" style="--bg-image: url({post.photo_url})">
                           <img src={post.photo_url} alt={post.title} class="post-image" />
                         </div>
                       {:else}
-                    <div class="post-image-container">
-                      <div class="post-image-placeholder"></div>
-                    </div>
+                        <div class="post-image-container">
+                          <div class="post-image-placeholder"></div>
+                        </div>
                       {/if}
                     <h3 class="post-title">{post.title}</h3>
                       <div class="post-category">{getCategoryDisplayName(post.category)}</div>
@@ -509,13 +509,13 @@
                   <div class="user-avatar"></div>
                   <div class="post-content">
                       {#if post.photo_url}
-                        <div class="post-image-container">
+                        <div class="post-image-container" style="--bg-image: url({post.photo_url})">
                           <img src={post.photo_url} alt={post.title} class="post-image" />
                         </div>
                       {:else}
-                    <div class="post-image-container">
-                      <div class="post-image-placeholder"></div>
-                    </div>
+                        <div class="post-image-container">
+                          <div class="post-image-placeholder"></div>
+                        </div>
                       {/if}
                     <h3 class="post-title">{post.title}</h3>
                       <div class="post-category">{getCategoryDisplayName(post.category)}</div>
@@ -699,7 +699,7 @@
                   </div>
                   
                   {#if imagePreviewUrl}
-                    <div class="image-preview">
+                    <div class="image-preview" style="--bg-image: url({imagePreviewUrl})">
                       <img src={imagePreviewUrl} alt="Preview" />
                     </div>
                   {/if}
@@ -977,12 +977,36 @@
     border-radius: 10px;
     margin-bottom: 15px;
     overflow: hidden;
+    position: relative;
+  }
+
+  .post-image-container::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: var(--bg-image, none);
+    background-size: cover;
+    background-position: center;
+    filter: blur(15px);
+    transform: scale(1.1);
+    opacity: 0.5;
+    z-index: 1;
   }
 
   .post-image {
-    max-width: 100%;
-    max-height: 200px;
+    max-width: 90%;
+    max-height: 90%;
+    width: auto !important;
+    height: auto !important;
     object-fit: contain;
+    position: relative;
+    z-index: 2;
+    display: block;
+    margin: 0 auto;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   }
 
   .post-image-placeholder {
@@ -990,6 +1014,8 @@
     height: 100%;
     background-color: #ffffff;
     border-radius: 10px;
+    position: relative;
+    z-index: 2;
   }
 
   .post-title {
@@ -1053,13 +1079,12 @@
     transition: all 0.2s;
     padding: 8px;
     border-radius: 10px;
-    background-color: rgba(255, 255, 255, 0.5);
+    background-color: transparent;
   }
   
   .topic:hover {
     transform: translateY(-3px);
-    background-color: rgba(255, 255, 255, 0.9);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    background-color: transparent;
   }
 
   .topic-icon {
@@ -1072,6 +1097,7 @@
     background-color: #e0e0e0;
     transition: all 0.2s;
     border: 2px solid transparent;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   }
 
   .topic-icon.active {
@@ -1620,13 +1646,42 @@
     width: 100%;
     max-width: 300px;
     overflow: hidden;
+    position: relative;
+    height: 200px;
+    background-color: #f5f5f5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
   
   .image-preview img {
-    width: 100%;
-    height: auto;
+    max-width: 90%;
+    max-height: 90%;
+    width: auto !important;
+    height: auto !important;
     border-radius: 4px;
     display: block;
+    object-fit: contain;
+    position: relative;
+    z-index: 2;
+    margin: 0 auto;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  .image-preview::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: var(--bg-image, url(''));
+    background-size: cover;
+    background-position: center;
+    filter: blur(15px);
+    transform: scale(1.1);
+    opacity: 0.5;
+    z-index: 1;
   }
   
   /* Title input field */
