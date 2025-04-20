@@ -65,21 +65,19 @@ def convert_post_db_to_schema(post_db: PostDB) -> Post:
             comments_list.append(comment_obj)
     
     # Create a Post object with the right format for likes
-    post_dict = {
-        "id": post_db.id,
-        "title": post_db.title,
-        "content": post_db.content,
-        "author_id": post_db.author_id,
-        "author": author_data,  # Добавляем информацию об авторе
-        "photo_url": post_db.photo_url,
-        "category": post_db.category,
-        "created_at": post_db.created_at,
-        "updated_at": post_db.updated_at,
-        "likes": like_ids,
-        "comments": comments_list
-    }
-    
-    return Post.parse_obj(post_dict)
+    return Post(
+        id=post_db.id,
+        title=post_db.title,
+        content=post_db.content,
+        author_id=post_db.author_id,
+        author=AuthorInfo(**author_data),
+        photo_url=post_db.photo_url,
+        category=post_db.category,
+        created_at=post_db.created_at,
+        updated_at=post_db.updated_at,
+        likes=like_ids,
+        comments=comments_list
+    )
 
 @post_router.get("", response_model=List[Post])
 async def read_posts(skip: int = 0, limit: int = 100, category: Optional[Category] = None, db: Session = Depends(get_db)):
