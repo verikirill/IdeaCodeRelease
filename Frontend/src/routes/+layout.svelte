@@ -10,6 +10,7 @@
   $: isAuthPage = $page.url.pathname === '/login' || $page.url.pathname === '/register';
   $: isProfilePage = $page.url.pathname === '/profile' || $page.url.pathname === '/account';
   $: isAdminPanelPage = $page.url.pathname === '/admin_panel';
+  $: isPsychologistPage = $page.url.pathname === '/psychologist';
 
   let currentPath = '';
 
@@ -50,7 +51,9 @@
     {#if !isProfilePage}
       <Profile />
     {/if}
-    <ChatBot />
+    {#if !isPsychologistPage}
+      <ChatBot />
+    {/if}
   {/if}
 
   <div class="global-background"></div>

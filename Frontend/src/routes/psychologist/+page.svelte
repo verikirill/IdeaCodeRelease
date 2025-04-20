@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import PsychologistChatBot from '$lib/components/PsychologistChatBot.svelte';
   
   let activeSection: string | null = null;
   let showFormModal: boolean = false;
@@ -252,6 +253,9 @@
     </div>
   </div>
 {/if}
+
+<!-- Заменяем обычный чат-бот на психолог-чат-бот -->
+<PsychologistChatBot />
 
 <style>
   .psychologist-background {
