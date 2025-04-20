@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import datetime
@@ -12,6 +13,18 @@ from schemas import Post, PostCreate, Comment, CommentBase, Category
 from dependencies import get_db, get_current_active_user, convert_to_db_types
 
 post_router = APIRouter(prefix="/posts", tags=["Posts"])
+
+# Configure CORS
+origins = [
+    "http://localhost:3000",  # React default
+    "http://localhost:5173",  # Vite default
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:5173",
+    # Add your frontend URL here
+]
+
+# Note: This middleware should be added to the main app, not here.
+# This is just a reference for the main.py file.
 
 # Create directory for post images if it doesn't exist
 UPLOAD_DIR = Path("static/uploads/posts")
