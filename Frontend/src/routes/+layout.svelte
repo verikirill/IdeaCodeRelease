@@ -8,6 +8,8 @@
   import { browser } from '$app/environment';
   
   $: isAuthPage = $page.url.pathname === '/login' || $page.url.pathname === '/register';
+  $: isProfilePage = $page.url.pathname === '/profile' || $page.url.pathname === '/account';
+  $: isAdminPanelPage = $page.url.pathname === '/admin_panel';
 
   onMount(async () => {
     if (browser) {
@@ -21,14 +23,17 @@
   });
 </script>
 
-<div class="app-container">
+<div class="app">
   {#if !isAuthPage}
     <Navbar />
-    <Profile />
+    {#if !isProfilePage}
+      <Profile />
+    {/if}
     <ChatBot />
   {/if}
+
   <main>
-    <slot />
+    <slot></slot>
   </main>
 </div>
 
@@ -86,19 +91,81 @@
     font-style: normal;
   }
 
-  .app-container {
-    width: 100%;
+  .app {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+
+  .top-header {
+    background-color: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    padding: 15px 0;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .nav-container {
     max-width: 1200px;
     margin: 0 auto;
-    padding: 0;
-    box-sizing: border-box;
-    position: relative;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 20px;
   }
-  
+
+  .nav-buttons {
+    display: flex;
+    gap: 15px;
+    margin: 0 auto;
+  }
+
+  .nav-button {
+    display: flex;
+    align-items: center;
+    padding: 8px 15px;
+    border-radius: 8px;
+    background-color: #fff;
+    color: #333;
+    text-decoration: none;
+    font-weight: 500;
+    border: 1px solid #e0e0e0;
+    transition: all 0.2s ease;
+  }
+
+  .nav-button.active {
+    background-color: #1A3882;
+    color: white;
+    border-color: #1A3882;
+  }
+
+  .nav-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  .icon {
+    margin-left: 8px;
+  }
+
+  .profile-button {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: #f5f5f5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #666;
+    text-decoration: none;
+    border: 1px solid #e0e0e0;
+  }
+
   main {
-    width: 100%;
-    min-height: calc(100vh - 40px);
-    box-sizing: border-box;
+    flex: 1;
   }
 
   @media (max-width: 768px) {

@@ -226,7 +226,6 @@
     margin: 0;
     padding: 0;
     font-family: 'SF Pro Display', Arial, sans-serif;
-    background-color: #333333;
     overflow-x: hidden;
   }
 

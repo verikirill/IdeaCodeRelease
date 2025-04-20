@@ -137,6 +137,91 @@ const createAuthStore = () => {
     }
   }
   
+  // Функция для обновления профиля пользователя
+  async function updateUserProfile(userData: Partial<UserData>): Promise<boolean> {
+    try {
+      let currentToken: string | null = null;
+      token.subscribe(value => {
+        currentToken = value;
+      })();
+      
+      if (!currentToken) {
+        return false;
+      }
+      
+      // Отправляем запрос на обновление профиля
+      const response = await fetch(`${API_URL}/users/update-profile`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${currentToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(userData)
+      });
+      
+      if (!response.ok) {
+        throw new Error('Не удалось обновить данные пользователя');
+      }
+      
+      // Получаем обновленные данные
+      const updatedUser = await response.json();
+      user.set(updatedUser);
+      
+      if (browser) {
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Error updating user profile:', error);
+      return false;
+    }
+  }
+  
+  // Функция для загрузки аватара
+  async function uploadAvatar(file: File): Promise<boolean> {
+    try {
+      let currentToken: string | null = null;
+      token.subscribe(value => {
+        currentToken = value;
+      })();
+      
+      if (!currentToken) {
+        return false;
+      }
+      
+      // Создаем FormData для отправки файла
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      // Отправляем запрос на загрузку аватара
+      const response = await fetch(`${API_URL}/users/upload-avatar`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${currentToken}`
+        },
+        body: formData
+      });
+      
+      if (!response.ok) {
+        throw new Error('Не удалось загрузить аватар');
+      }
+      
+      // Получаем обновленные данные пользователя
+      const updatedUser = await response.json();
+      user.set(updatedUser);
+      
+      if (browser) {
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Error uploading avatar:', error);
+      return false;
+    }
+  }
+  
   // Функция для регистрации
   async function register(data: RegisterData): Promise<boolean> {
     try {
@@ -185,7 +270,9 @@ const createAuthStore = () => {
     login,
     register,
     logout,
-    fetchUserData
+    fetchUserData,
+    updateUserProfile,
+    uploadAvatar
   };
 };
 

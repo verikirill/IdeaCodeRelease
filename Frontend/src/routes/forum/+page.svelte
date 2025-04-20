@@ -56,149 +56,152 @@
   });
 </script>
 
-<div class="container">
-  <main>
-    <div class="forum-header">
-      <h1>Студенческий форум</h1>
-      <p>5000 участников</p>
-    </div>
+<div class="forum-page"></div>
+<div class="forum-content">
+  <div class="container">
+    <main>
+      <div class="forum-header">
+        <h1>Студенческий форум</h1>
+        <p>5000 участников</p>
+      </div>
 
-    <div class="content">
-      <div class="left-panel">
-        <div class="section-header">
-          <span class="section-icon"><img src="/3lines.svg" alt="Menu" /></span>
-          <h2>Статьи</h2>
-        </div>
+      <div class="content">
+        <div class="left-panel">
+          <div class="section-header">
+            <span class="section-icon"><img src="/3lines.svg" alt="Menu" /></span>
+            <h2>Статьи</h2>
+          </div>
 
-        <div class="posts">
-          {#each posts as post}
-            <!-- Expanded view for selected post -->
-            {#if selectedPost && selectedPost.id === post.id}
-              <div class="post selected-post">
-                <div class="user-avatar"></div>
-                <div class="post-content">
-                  <div class="post-image-container">
-                    <div class="post-image-placeholder"></div>
-                  </div>
-                  <h3 class="post-title">{post.title}</h3>
-                  <div class="post-meta">
-                    <span class="meta-item date">
-                      <img src="/mdi_calendar.svg" alt="Дата" /> {post.date}
-                    </span>
-                    <span class="meta-item views">
-                      <img src="/viev.svg" alt="Просмотры" /> {post.views}
-                    </span>
-                    <span class="meta-item replies">
-                      <img src="/otvet.svg" alt="Ответы" /> {post.replies} {post.replies === 1 ? 'ответ' : 'ответа'}
-                    </span>
-                  </div>
-                  
-                  <button class="view-replies collapse" on:click={() => viewPost(post)}>Свернуть ответы</button>
-                  
-                  <!-- Comments -->
-                  <div class="post-comments">
-                    {#each post.comments as comment}
-                      <div class="comment">
-                        <div class="user-avatar"></div>
-                        <div class="comment-content">
-                          <h4 class="comment-author">{comment.author}</h4>
-                          <p class="comment-text">{comment.text}</p>
+          <div class="posts">
+            {#each posts as post}
+              <!-- Expanded view for selected post -->
+              {#if selectedPost && selectedPost.id === post.id}
+                <div class="post selected-post">
+                  <div class="user-avatar"></div>
+                  <div class="post-content">
+                    <div class="post-image-container">
+                      <div class="post-image-placeholder"></div>
+                    </div>
+                    <h3 class="post-title">{post.title}</h3>
+                    <div class="post-meta">
+                      <span class="meta-item date">
+                        <img src="/mdi_calendar.svg" alt="Дата" /> {post.date}
+                      </span>
+                      <span class="meta-item views">
+                        <img src="/viev.svg" alt="Просмотры" /> {post.views}
+                      </span>
+                      <span class="meta-item replies">
+                        <img src="/otvet.svg" alt="Ответы" /> {post.replies} {post.replies === 1 ? 'ответ' : 'ответа'}
+                      </span>
+                    </div>
+                    
+                    <button class="view-replies collapse" on:click={() => viewPost(post)}>Свернуть ответы</button>
+                    
+                    <!-- Comments -->
+                    <div class="post-comments">
+                      {#each post.comments as comment}
+                        <div class="comment">
+                          <div class="user-avatar"></div>
+                          <div class="comment-content">
+                            <h4 class="comment-author">{comment.author}</h4>
+                            <p class="comment-text">{comment.text}</p>
+                          </div>
                         </div>
-                      </div>
-                    {/each}
+                      {/each}
+                    </div>
                   </div>
                 </div>
-              </div>
-            {:else}
-              <!-- Collapsed view for other posts -->
-              <div class="post">
-                <div class="user-avatar"></div>
-                <div class="post-content">
-                  <div class="post-image-container">
-                    <div class="post-image-placeholder"></div>
+              {:else}
+                <!-- Collapsed view for other posts -->
+                <div class="post">
+                  <div class="user-avatar"></div>
+                  <div class="post-content">
+                    <div class="post-image-container">
+                      <div class="post-image-placeholder"></div>
+                    </div>
+                    <h3 class="post-title">{post.title}</h3>
+                    <div class="post-meta">
+                      <span class="meta-item date">
+                        <img src="/mdi_calendar.svg" alt="Дата" /> {post.date}
+                      </span>
+                      <span class="meta-item views">
+                        <img src="/viev.svg" alt="Просмотры" /> {post.views}
+                      </span>
+                      <span class="meta-item replies">
+                        <img src="/otvet.svg" alt="Ответы" /> {post.replies} {post.replies === 1 ? 'ответ' : 'ответа'}
+                      </span>
+                    </div>
+                    <button class="view-replies" on:click={() => viewPost(post)}>Смотреть ответы</button>
                   </div>
-                  <h3 class="post-title">{post.title}</h3>
-                  <div class="post-meta">
-                    <span class="meta-item date">
-                      <img src="/mdi_calendar.svg" alt="Дата" /> {post.date}
-                    </span>
-                    <span class="meta-item views">
-                      <img src="/viev.svg" alt="Просмотры" /> {post.views}
-                    </span>
-                    <span class="meta-item replies">
-                      <img src="/otvet.svg" alt="Ответы" /> {post.replies} {post.replies === 1 ? 'ответ' : 'ответа'}
-                    </span>
-                  </div>
-                  <button class="view-replies" on:click={() => viewPost(post)}>Смотреть ответы</button>
                 </div>
-              </div>
-            {/if}
-          {/each}
-        </div>
-      </div>
-
-      <div class="right-panel">
-        <div class="about-forum">
-          <div class="section-header">
-            <span class="section-icon"><img src="/3lines.svg" alt="Menu" /></span>
-            <h2>О форуме</h2>
+              {/if}
+            {/each}
           </div>
-          
-          <div class="info-block">
-            <span class="info-icon">
-              <img src="/info.svg" alt="Информация" />
-            </span>
-            <p>Добро пожаловать на Студенческий Хаб — место, где встречаются знания, опыт и студенческая жизнь!</p>
-          </div>
-          
-          <p class="about-text">
-            Неважно, первокурсник ты или выпускник – здесь каждый найдёт что-то полезное (и забавное).
-            Присоединяйся, задавай вопросы, делись опытом и делай студенческие годы ярче!
-          </p>
         </div>
 
-        <div class="topics">
-          <div class="section-header">
-            <span class="section-icon"><img src="/3lines.svg" alt="Menu" /></span>
-            <h2>Темы</h2>
+        <div class="right-panel">
+          <div class="about-forum">
+            <div class="section-header">
+              <span class="section-icon"><img src="/3lines.svg" alt="Menu" /></span>
+              <h2>О форуме</h2>
+            </div>
+            
+            <div class="info-block">
+              <span class="info-icon">
+                <img src="/info.svg" alt="Информация" />
+              </span>
+              <p>Добро пожаловать на Студенческий Хаб — место, где встречаются знания, опыт и студенческая жизнь!</p>
+            </div>
+            
+            <p class="about-text">
+              Неважно, первокурсник ты или выпускник – здесь каждый найдёт что-то полезное (и забавное).
+              Присоединяйся, задавай вопросы, делись опытом и делай студенческие годы ярче!
+            </p>
           </div>
-          
-          <div class="topic-icons">
-            <div class="topic">
-              <div class="topic-icon">
-                <img src="/cute house.png" alt="Флудилка" class="icon-house" />
-              </div>
-              <span>Флудилка</span>
+
+          <div class="topics">
+            <div class="section-header">
+              <span class="section-icon"><img src="/3lines.svg" alt="Menu" /></span>
+              <h2>Темы</h2>
             </div>
-            <div class="topic">
-              <div class="topic-icon">
-                <img src="/search cute blue icon.png" alt="Потеряшки" class="icon-search" />
+            
+            <div class="topic-icons">
+              <div class="topic">
+                <div class="topic-icon">
+                  <img src="/cute house.png" alt="Флудилка" class="icon-house" />
+                </div>
+                <span>Флудилка</span>
               </div>
-              <span>Потеряшки</span>
-            </div>
-            <div class="topic">
-              <div class="topic-icon">
-                <img src="/blue speech bubble.png" alt="Подслушано" class="icon-speech" />
+              <div class="topic">
+                <div class="topic-icon">
+                  <img src="/search cute blue icon.png" alt="Потеряшки" class="icon-search" />
+                </div>
+                <span>Потеряшки</span>
               </div>
-              <span>Подслушано</span>
-            </div>
-            <div class="topic">
-              <div class="topic-icon">
-                <img src="/cute books.png" alt="Конспекты" class="icon-books" />
+              <div class="topic">
+                <div class="topic-icon">
+                  <img src="/blue speech bubble.png" alt="Подслушано" class="icon-speech" />
+                </div>
+                <span>Подслушано</span>
               </div>
-              <span>Конспекты</span>
-            </div>
-            <div class="topic">
-              <div class="topic-icon">
-                <img src="/thumbs up.png" alt="Полезное" class="icon-thumbs" />
+              <div class="topic">
+                <div class="topic-icon">
+                  <img src="/cute books.png" alt="Конспекты" class="icon-books" />
+                </div>
+                <span>Конспекты</span>
               </div>
-              <span>Полезное</span>
+              <div class="topic">
+                <div class="topic-icon">
+                  <img src="/thumbs up.png" alt="Полезное" class="icon-thumbs" />
+                </div>
+                <span>Полезное</span>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
-  </main>
+    </main>
+  </div>
 </div>
 
 <style>
@@ -235,6 +238,25 @@
     padding: 0;
     font-family: 'SF Pro Display', Arial, sans-serif;
     background-color: #ffffff;
+  }
+
+  /* Фон страницы */
+  .forum-page {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-size: cover;
+    background-position: center center;
+    background-repeat: no-repeat;
+    z-index: -1;
+  }
+  
+  .forum-content {
+    position: relative;
+    min-height: 100vh;
+    z-index: 1;
   }
 
   .container {
