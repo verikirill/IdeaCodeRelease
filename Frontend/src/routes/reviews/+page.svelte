@@ -1,7 +1,17 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { page } from '$app/stores';
+  import { goto, afterNavigate } from '$app/navigation';
   import { fade, fly } from 'svelte/transition';
   import { cubicOut } from 'svelte/easing';
+
+  // Prevent auto-redirection
+  let redirectAttempted = false;
+
+  afterNavigate(() => {
+    // Set flag after successful navigation to this page
+    redirectAttempted = true;
+  });
 
   interface Teacher {
     id: number;
@@ -16,57 +26,72 @@
     {
       id: 1,
       name: "Имя преподавателя",
-      description: "Краткое описание",
+      description: "Краткое описание предмета и особенностей преподавателя",
       rating: 5,
       reviewCount: 3,
-      image: '/prepod (1).png'
+      image: '/avatar.png'
     },
     {
       id: 2,
       name: "Имя преподавателя",
-      description: "Краткое описание",
+      description: "Краткое описание предмета и особенностей преподавателя",
       rating: 4,
       reviewCount: 7,
-      image: '/prepod (2).png'
+      image: '/avatar.png'
     },
     {
       id: 3,
       name: "Имя преподавателя",
-      description: "Краткое описание",
+      description: "Краткое описание предмета и особенностей преподавателя",
       rating: 3,
       reviewCount: 5,
-      image: '/prepod (3).png'
+      image: '/avatar.png'
     }
   ];
   
   let selectedRating = "Любой";
   let searchQuery = "";
   
-  let teachersVisible = false;
+  let teachersVisible = true; // Set to true by default to ensure teachers are always visible
   
   function viewTeacherReviews(teacher: Teacher): void {
     // Functionality to display reviews for selected teacher
     console.log(`Viewing reviews for ${teacher.name}`);
+    alert(`Отзывы для ${teacher.name} будут доступны в ближайшее время`);
+  }
+  
+  function handleImageError(event: Event): void {
+    // Fallback if image fails to load
+    const target = event.target as HTMLImageElement;
+    target.src = '/avatar.png';
   }
   
   onMount(() => {
-    // Set up intersection observer for teachers list
-    const teachersObserver = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          teachersVisible = true;
-          teachersObserver.unobserve(entry.target);
-        }
-      });
-    }, { threshold: 0.15 });
+    // Simple initialization
+    teachersVisible = true;
     
-    // Observe teachers list
-    const teachersList = document.querySelector('.teachers-list');
-    if (teachersList) {
-      teachersObserver.observe(teachersList);
-    }
+    // Check for unintended navigation
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (!redirectAttempted) {
+        // This will prevent redirects from this page
+        e.preventDefault();
+        e.returnValue = '';
+        return '';
+      }
+    };
+    
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    
+    // Cancel any pending redirects
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
   });
 </script>
+
+<svelte:head>
+  <title>Отзывы о преподавателях</title>
+</svelte:head>
 
 <div class="reviews-page"></div>
 <div class="reviews-content">
@@ -98,37 +123,32 @@
 
       <div class="teachers-list">
         {#each teachers as teacher, i}
-          {#if teachersVisible}
-            <div 
-              class="teacher-card"
-              in:fly={{ y: 30, duration: 500, delay: i * 150, easing: cubicOut }}
-            >
-              <div class="teacher-photo">
-                <img src={teacher.image} alt={teacher.name} />
+          <div class="teacher-card">
+            <div class="teacher-photo">
+              <img src={teacher.image} alt={teacher.name} on:error={handleImageError} />
+            </div>
+            
+            <div class="teacher-info">
+              <div class="rating">
+                {#each Array(5) as _, i}
+                  <span class="star">{i < teacher.rating ? '★' : '☆'}</span>
+                {/each}
               </div>
               
-              <div class="teacher-info">
-                <div class="rating">
-                  {#each Array(5) as _, i}
-                    <span class="star">{i < teacher.rating ? '★' : '☆'}</span>
-                  {/each}
-                </div>
-                
-                <h2 class="teacher-name">{teacher.name}</h2>
-                <p class="teacher-description">{teacher.description}</p>
-                
-                <div class="review-meta">
-                  <span class="review-count">
-                    <span class="icon">📝</span> {teacher.reviewCount} отзыва
-                  </span>
-                </div>
-                
-                <button class="view-reviews" on:click={() => viewTeacherReviews(teacher)}>
-                  Читать отзывы
-                </button>
+              <h2 class="teacher-name">{teacher.name}</h2>
+              <p class="teacher-description">{teacher.description}</p>
+              
+              <div class="review-meta">
+                <span class="review-count">
+                  <span class="icon">📝</span> {teacher.reviewCount} {teacher.reviewCount === 1 ? 'отзыв' : (teacher.reviewCount < 5 ? 'отзыва' : 'отзывов')}
+                </span>
               </div>
+              
+              <button class="view-reviews" on:click={() => viewTeacherReviews(teacher)}>
+                Читать отзывы
+              </button>
             </div>
-          {/if}
+          </div>
         {/each}
       </div>
     </main>
