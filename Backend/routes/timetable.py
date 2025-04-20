@@ -170,7 +170,7 @@ def save_data_to_db(db: Session, lessons, places, groups, teachers, subjects):
             if teacher_id and teacher_id not in teacher_set:
                 teacher_set.add(teacher_id)
                 db.execute(
-                    text(f"INSERT OR IGNORE INTO lesson_teachers (lesson_id, teacher_id) VALUES ({lesson_db.id}, {teacher_id})")
+                    text(f"INSERT INTO lesson_teachers (lesson_id, teacher_id) VALUES ({lesson_db.id}, {teacher_id}) ON CONFLICT DO NOTHING")
                 )
         
         group_set = set()
@@ -189,7 +189,7 @@ def save_data_to_db(db: Session, lessons, places, groups, teachers, subjects):
                 if group_id and group_id not in group_set:
                     group_set.add(group_id)
                     db.execute(
-                        text(f"INSERT OR IGNORE INTO lesson_groups (lesson_id, group_id) VALUES ({lesson_db.id}, {group_id})")
+                        text(f"INSERT INTO lesson_groups (lesson_id, group_id) VALUES ({lesson_db.id}, {group_id}) ON CONFLICT DO NOTHING")
                     )
                     lesson_group_links += 1
         
@@ -199,7 +199,7 @@ def save_data_to_db(db: Session, lessons, places, groups, teachers, subjects):
             if place_id and place_id not in place_set:
                 place_set.add(place_id)
                 db.execute(
-                    text(f"INSERT OR IGNORE INTO lesson_places (lesson_id, place_id) VALUES ({lesson_db.id}, {place_id})")
+                    text(f"INSERT INTO lesson_places (lesson_id, place_id) VALUES ({lesson_db.id}, {place_id}) ON CONFLICT DO NOTHING")
                 )
     
     db.commit()
