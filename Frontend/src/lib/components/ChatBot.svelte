@@ -212,12 +212,15 @@
     justify-content: center;
     z-index: 1000;
     padding: 15px;
+    margin-right: 10px;
+
   }
 
   .chat-bot img {
     width: 65px;
     height: 65px;
     cursor: pointer;
+    margin-right: 20px;
   }
 
   .chat-bubble {

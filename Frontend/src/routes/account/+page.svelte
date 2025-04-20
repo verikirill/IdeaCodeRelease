@@ -5,6 +5,7 @@
   import { searchGroups, getUserGroup, selectUserGroup } from '$lib/services/timetable';
   import type { UserData } from '$lib/services/auth';
   import type { Group } from '$lib/services/timetable';
+  import Profile from '$lib/components/Profile.svelte';
   
   let user: UserData | null = null;
   let isLoading = true;
@@ -370,6 +371,9 @@
 
 <div class="page-container">
   <div class="container">
+    <!-- Include the Profile component -->
+    <Profile />
+    
     <!-- Removed the header/navbar section -->
     
     <!-- Removed the profile icon section since it's already in the layout -->
@@ -829,6 +833,12 @@
     border-radius: 50%;
     overflow: hidden;
     background-color: #fff;
+    cursor: pointer;
+    transition: transform 0.2s;
+  }
+  
+  .avatar:hover {
+    transform: scale(1.1);
   }
 
   .avatar img {
