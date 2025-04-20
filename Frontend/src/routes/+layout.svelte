@@ -32,6 +32,7 @@
     <ChatBot />
   {/if}
 
+  <div class="global-background"></div>
   <main>
     <slot></slot>
   </main>
@@ -95,6 +96,20 @@
     display: flex;
     flex-direction: column;
     min-height: 100vh;
+    position: relative;
+  }
+
+  .global-background {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url('/rasp_background.png');
+    background-size: cover;
+    background-position: center center;
+    background-repeat: no-repeat;
+    z-index: -1;
   }
 
   .top-header {

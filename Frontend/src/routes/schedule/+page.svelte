@@ -166,7 +166,6 @@
   });
 </script>
 
-<div class="schedule-page"></div>
 <div class="schedule-content">
   <!-- Содержимое страницы расписания -->
   <div class="schedule-container">
@@ -244,16 +243,7 @@
 <style>
   /* Стили для страницы и фона */
   .schedule-page {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-image: url('/rasp_background.png');
-    background-size: cover;
-    background-position: center center;
-    background-repeat: no-repeat;
-    z-index: -1;
+    display: none; /* Hiding the page-specific background */
   }
   
   .schedule-content {
