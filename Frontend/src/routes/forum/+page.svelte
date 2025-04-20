@@ -56,6 +56,8 @@
     'Полезное': 'Полезное'
   };
   
+  let selectedCategoryFilter: string | null = null;
+  
   function viewPost(post: Post): void {
     selectedPost = selectedPost?.id === post.id ? null : post;
   }
@@ -344,6 +346,17 @@
     return categoryLabels[category] || category;
   }
   
+  function filterPostsByCategory(category: string | null): void {
+    selectedCategoryFilter = category === selectedCategoryFilter ? null : category;
+  }
+
+  function getFilteredPosts(): Post[] {
+    if (!selectedCategoryFilter) {
+      return posts;
+    }
+    return posts.filter(post => post.category === selectedCategoryFilter);
+  }
+  
   onMount(() => {
     isLoggedIn = checkAuth();
     if (isLoggedIn) {
@@ -376,6 +389,45 @@
             <h2>Записи</h2>
           </div>
 
+          <div class="category-filters">
+            <button 
+              class="filter-btn {selectedCategoryFilter === null ? 'active' : ''}" 
+              on:click={() => filterPostsByCategory(null)}
+            >
+              Все
+            </button>
+            <button 
+              class="filter-btn {selectedCategoryFilter === 'Флудилка' ? 'active' : ''}" 
+              on:click={() => filterPostsByCategory('Флудилка')}
+            >
+              Флудилка
+            </button>
+            <button 
+              class="filter-btn {selectedCategoryFilter === 'Потеряшки' ? 'active' : ''}" 
+              on:click={() => filterPostsByCategory('Потеряшки')}
+            >
+              Потеряшки
+            </button>
+            <button 
+              class="filter-btn {selectedCategoryFilter === 'Подслушано' ? 'active' : ''}" 
+              on:click={() => filterPostsByCategory('Подслушано')}
+            >
+              Подслушано
+            </button>
+            <button 
+              class="filter-btn {selectedCategoryFilter === 'Конспекты' ? 'active' : ''}" 
+              on:click={() => filterPostsByCategory('Конспекты')}
+            >
+              Конспекты
+            </button>
+            <button 
+              class="filter-btn {selectedCategoryFilter === 'Полезное' ? 'active' : ''}" 
+              on:click={() => filterPostsByCategory('Полезное')}
+            >
+              Полезное
+            </button>
+          </div>
+
           {#if isLoading}
             <div class="loading">Загрузка постов...</div>
           {:else if error}
@@ -384,7 +436,7 @@
             <div class="no-posts">Пока нет записей в форуме</div>
           {:else}
             <div class="posts">
-              {#each posts as post}
+              {#each getFilteredPosts() as post}
                 <!-- Expanded view for selected post -->
                 {#if selectedPost && selectedPost.id === post.id}
                   <div class="post selected-post">
@@ -484,7 +536,10 @@
                            post.comments?.length >= 2 && post.comments?.length <= 4 ? 'ответа' : 'ответов'}
                         </span>
                       </div>
-                      <button class="view-replies" on:click={() => viewPost(post)}>Смотреть подробнее</button>
+                      <div class="post-author">
+                        Автор: {post.author?.username || 'Аноним'}
+                      </div>
+                      <button class="view-replies" on:click={() => viewPost(post)}>Комментарии</button>
                     </div>
                   </div>
                 {/if}
@@ -912,14 +967,25 @@
     display: flex;
     justify-content: flex-start;
     width: 100%;
+    height: 200px;
+    background-color: #f5f5f5;
+    border-radius: 10px;
+    margin-bottom: 15px;
+    overflow: hidden;
+  }
+
+  .post-image {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    margin: 0 auto;
   }
 
   .post-image-placeholder {
-    width: 70%;
-    height: 150px;
+    width: 100%;
+    height: 100%;
     background-color: #ffffff;
     border-radius: 10px;
-    margin-bottom: 15px;
   }
 
   .post-title {
@@ -1518,5 +1584,52 @@
   
   .cancel-button:hover {
     background-color: #e9ecef;
+  }
+
+  /* Add category filters at the top of the posts section */
+  .category-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .filter-btn {
+    background-color: #f0f0f0;
+    border: none;
+    border-radius: 20px;
+    padding: 8px 16px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .filter-btn.active {
+    background-color: #1A3882;
+    color: white;
+  }
+
+  .filter-btn:hover {
+    background-color: #1A3882;
+    color: white;
+  }
+
+  .post-author {
+    margin-top: 10px;
+    font-size: 14px;
+    color: #666;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .post-author:before {
+    content: '';
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    background-image: url('/user-icon.svg');
+    background-size: contain;
+    background-repeat: no-repeat;
   }
 </style>
