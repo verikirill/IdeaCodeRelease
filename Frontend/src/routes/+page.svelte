@@ -10,6 +10,7 @@
   let currentStoryIndex = 0;
   let prevStoryIndex = 0;
   let direction = 1; // 1 для вперед, -1 для назад
+  let cardsReady = false; // Flag to control the animation of service cards
   
   interface Story {
     id: number;
@@ -175,6 +176,11 @@
         avatar = '/avatar.png';
       }
     });
+
+    // Trigger animation for service cards after a short delay
+    setTimeout(() => {
+      cardsReady = true;
+    }, 500);
     
     return () => {
       // Отписаться при уничтожении компонента
@@ -202,15 +208,26 @@
       <section class="services">
         <h2>Сервисы</h2>
         <div class="services-grid">
-          {#each services as service}
-            <div class="service-card" 
-                 on:click={() => service.link && navigateTo(service.link)} 
-                 class:clickable={service.link}>
-              <h3>{service.title}</h3>
-              <div class="service-icon">
-                <img src={service.image} alt={service.title} />
+          {#each services as service, i}
+            {#if cardsReady}
+              <div class="service-card" 
+                   in:fly={{ y: 50, duration: 400, delay: i * 100, easing: cubicOut }} 
+                   on:click={() => service.link && navigateTo(service.link)} 
+                   class:clickable={service.link}>
+                <h3>{service.title}</h3>
+                <div class="service-icon">
+                  <img src={service.image} alt={service.title} />
+                </div>
               </div>
-            </div>
+            {:else}
+              <div class="service-card service-card-hidden"
+                   class:clickable={service.link}>
+                <h3>{service.title}</h3>
+                <div class="service-icon">
+                  <img src={service.image} alt={service.title} />
+                </div>
+              </div>
+            {/if}
           {/each}
         </div>
       </section>
@@ -439,6 +456,10 @@
     margin: 0;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
     overflow: hidden;
+  }
+  
+  .service-card-hidden {
+    opacity: 0;
   }
   
   .service-card.clickable {
