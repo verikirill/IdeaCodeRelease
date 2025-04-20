@@ -8,9 +8,6 @@ services:
     container_name: ideacode-backend
     ports:
       - "8000:8000"
-    volumes:
-      - ./Backend:/app
-      - ./static:/app/static
     environment:
       - DB_HOST=188.225.58.188
       - DB_NAME=users
@@ -28,9 +25,6 @@ services:
     container_name: ideacode-frontend
     ports:
       - "3000:3000"
-    volumes:
-      - ./Frontend:/app
-      - /app/node_modules
     environment:
       - ORIGIN=http://localhost:3000
       - API_URL=http://localhost:8000
