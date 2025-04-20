@@ -133,7 +133,8 @@
     },
     {
       title: 'Психолог',
-      image: '/main_page/happy emoji with hearts.png'
+      image: '/main_page/happy emoji with hearts.png',
+      link: '/psychologist'
     }
   ];
   
