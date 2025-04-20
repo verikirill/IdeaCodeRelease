@@ -30,20 +30,44 @@ origins = [
 UPLOAD_DIR = Path("static/uploads/posts")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
+# Helper function to convert PostDB objects to the Pydantic schema
+def convert_post_db_to_schema(post_db: PostDB) -> Post:
+    # Extract the user IDs from the likes relationship
+    like_ids = [user.id for user in post_db.likes] if post_db.likes else []
+    
+    # Create a Post object with the right format for likes
+    post_dict = {
+        "id": post_db.id,
+        "title": post_db.title,
+        "content": post_db.content,
+        "author_id": post_db.author_id,
+        "photo_url": post_db.photo_url,
+        "category": post_db.category,
+        "created_at": post_db.created_at,
+        "updated_at": post_db.updated_at,
+        "likes": like_ids,
+        "comments": post_db.comments
+    }
+    
+    return Post.parse_obj(post_dict)
+
 @post_router.get("", response_model=List[Post])
 async def read_posts(skip: int = 0, limit: int = 100, category: Optional[Category] = None, db: Session = Depends(get_db)):
     if category:
         posts = db.query(PostDB).filter(PostDB.category == category).offset(skip).limit(limit).all()
     else:
         posts = db.query(PostDB).offset(skip).limit(limit).all()
-    return posts
+    
+    # Convert PostDB objects to the Pydantic schema
+    return [convert_post_db_to_schema(post) for post in posts]
 
 @post_router.get("/{post_id}", response_model=Post)
 async def read_post(post_id: int, db: Session = Depends(get_db)):
     post = db.query(PostDB).filter(PostDB.id == post_id).first()
     if post is None:
         raise HTTPException(status_code=404, detail="Post not found")
-    return post
+    
+    return convert_post_db_to_schema(post)
 
 @post_router.post("", response_model=Post)
 async def create_post(post: PostCreate, current_user: UserDB = Depends(get_current_active_user), db: Session = Depends(get_db)):
@@ -53,7 +77,7 @@ async def create_post(post: PostCreate, current_user: UserDB = Depends(get_curre
     db.add(db_post)
     db.commit()
     db.refresh(db_post)
-    return db_post
+    return convert_post_db_to_schema(db_post)
 
 @post_router.post("/upload", response_model=Post)
 async def create_post_with_file(
@@ -100,7 +124,7 @@ async def create_post_with_file(
         db.add(db_post)
         db.commit()
         db.refresh(db_post)
-        return db_post
+        return convert_post_db_to_schema(db_post)
     except Exception as e:
         # Remove uploaded file in case of error
         if file_location.exists():
@@ -126,7 +150,7 @@ async def update_post(post_id: int, post: PostCreate, current_user: UserDB = Dep
     db_post.updated_at = datetime.utcnow()
     db.commit()
     db.refresh(db_post)
-    return db_post
+    return convert_post_db_to_schema(db_post)
 
 @post_router.put("/{post_id}/upload", response_model=Post)
 async def update_post_with_file(
@@ -189,7 +213,7 @@ async def update_post_with_file(
     # Save changes
     db.commit()
     db.refresh(db_post)
-    return db_post
+    return convert_post_db_to_schema(db_post)
 
 @post_router.delete("/{post_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_post(post_id: int, current_user: UserDB = Depends(get_current_active_user), db: Session = Depends(get_db)):
@@ -226,7 +250,7 @@ async def like_post(post_id: int, current_user: UserDB = Depends(get_current_act
     db_post.likes.append(current_user)
     db.commit()
     db.refresh(db_post)
-    return db_post
+    return convert_post_db_to_schema(db_post)
 
 @post_router.post("/{post_id}/unlike", response_model=Post)
 async def unlike_post(post_id: int, current_user: UserDB = Depends(get_current_active_user), db: Session = Depends(get_db)):
@@ -240,7 +264,7 @@ async def unlike_post(post_id: int, current_user: UserDB = Depends(get_current_a
     db_post.likes.remove(current_user)
     db.commit()
     db.refresh(db_post)
-    return db_post
+    return convert_post_db_to_schema(db_post)
 
 @post_router.post("/{post_id}/comments", response_model=Comment)
 async def create_comment(post_id: int, comment: CommentBase, current_user: UserDB = Depends(get_current_active_user), db: Session = Depends(get_db)):
