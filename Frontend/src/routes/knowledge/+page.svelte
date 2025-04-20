@@ -1,9 +1,27 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
+  import { fade, fly } from 'svelte/transition';
+  import { cubicOut } from 'svelte/easing';
+  
+  let cardsVisible = false;
   
   onMount(() => {
-    // Any initialization code can go here
+    // Set up intersection observer for knowledge grid
+    const cardsObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          cardsVisible = true;
+          cardsObserver.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.15 });
+    
+    // Observe knowledge grid
+    const knowledgeGrid = document.querySelector('.knowledge-grid');
+    if (knowledgeGrid) {
+      cardsObserver.observe(knowledgeGrid);
+    }
   });
   
   function goToTests() {
@@ -31,60 +49,77 @@
       </div>
       
       <div class="knowledge-grid">
-        <!-- Тесты минутки -->
-        <button class="knowledge-card dark" on:click={goToTests} on:keydown={(e) => e.key === 'Enter' && goToTests()}>
-          <h2>Тесты минутки</h2>
-          <p class="card-description">
-            Физик генерирует небольшие тесты для закрепления материала по пройденной теме
-          </p>
-          <div class="tests-graphic">
-            <img src="/baza.svg" alt="Тесты минутки" class="tests-image" />
-          </div>
-        </button>
-        
-        <!-- Готовые конспекты -->
-        <button class="knowledge-card orange" on:click={goToNotes} on:keydown={(e) => e.key === 'Enter' && goToNotes()}>
-          <h2>Готовые конспекты за два клика</h2>
-          <p class="card-description">
-            Физик помогает быстро и четко составить конспект для предстоящей пары!
-          </p>
-          <div class="notes-graphic">
-            <img src="/orange.png" alt="Готовые конспекты" class="notes-image" />
-          </div>
-        </button>
-        
-        <!-- Напоминания о контрольных -->
-        <button class="knowledge-card blue" on:click={goToReminders} on:keydown={(e) => e.key === 'Enter' && goToReminders()}>
-          <h2>Напоминания о предстоящих контрольных через телеграм</h2>
+        {#if cardsVisible}
+          <!-- Тесты минутки -->
+          <button 
+            class="knowledge-card dark" 
+            on:click={goToTests} 
+            on:keydown={(e) => e.key === 'Enter' && goToTests()}
+            in:fly={{ y: 30, duration: 500, delay: 0, easing: cubicOut }}
+          >
+            <h2>Тесты минутки</h2>
+            <p class="card-description">
+              Физик генерирует небольшие тесты для закрепления материала по пройденной теме
+            </p>
+            <div class="tests-graphic">
+              <img src="/baza.svg" alt="Тесты минутки" class="tests-image" />
+            </div>
+          </button>
           
-          <div class="reminder-container">
-            <div class="reminder-date">Сегодня</div>
+          <!-- Готовые конспекты -->
+          <button 
+            class="knowledge-card orange" 
+            on:click={goToNotes} 
+            on:keydown={(e) => e.key === 'Enter' && goToNotes()}
+            in:fly={{ y: 30, duration: 500, delay: 150, easing: cubicOut }}
+          >
+            <h2>Готовые конспекты за два клика</h2>
+            <p class="card-description">
+              Физик помогает быстро и четко составить конспект для предстоящей пары!
+            </p>
+            <div class="notes-graphic">
+              <img src="/orange.png" alt="Готовые конспекты" class="notes-image" />
+            </div>
+          </button>
+          
+          <!-- Напоминания о контрольных -->
+          <button 
+            class="knowledge-card blue" 
+            on:click={goToReminders} 
+            on:keydown={(e) => e.key === 'Enter' && goToReminders()}
+            in:fly={{ y: 30, duration: 500, delay: 300, easing: cubicOut }}
+          >
+            <h2>Напоминания о предстоящих контрольных через телеграм</h2>
             
-            <div class="reminder-card">
-              <div class="reminder-subject">Физик</div>
-              <div class="reminder-text">
-                До итоговой котрольной по дискретной математике осталось 
-                2 дня, поспеши подготовиться
+            <div class="reminder-container">
+              <div class="reminder-date">Сегодня</div>
+              
+              <div class="reminder-card">
+                <div class="reminder-subject">Физик</div>
+                <div class="reminder-text">
+                  До итоговой котрольной по дискретной математике осталось 
+                  2 дня, поспеши подготовиться
+                </div>
+              </div>
+              
+              <div class="reminder-card">
+                <div class="reminder-subject">Физик</div>
+                <div class="reminder-text">
+                  Я подготовил для вас тесты-минутки по теме основы ООП
+                </div>
+                <div class="lightning-icon">
+                  <svg viewBox="0 0 24 24" width="24" height="24" fill="#FFD43B">
+                    <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                  </svg>
+                </div>
+              </div>
+              
+              <div class="connect-button">
+                Подключить напоминания
               </div>
             </div>
-            
-            <div class="reminder-card">
-              <div class="reminder-subject">Физик</div>
-              <div class="reminder-text">
-                Я подготовил для вас тесты-минутки по теме основы ООП
-              </div>
-              <div class="lightning-icon">
-                <svg viewBox="0 0 24 24" width="24" height="24" fill="#FFD43B">
-                  <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                </svg>
-              </div>
-            </div>
-            
-            <div class="connect-button">
-              Подключить напоминания
-            </div>
-          </div>
-        </button>
+          </button>
+        {/if}
       </div>
     </main>
   </div>

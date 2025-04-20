@@ -1,5 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { fade, fly } from 'svelte/transition';
+  import { cubicOut } from 'svelte/easing';
 
   interface Teacher {
     id: number;
@@ -40,13 +42,29 @@
   let selectedRating = "Любой";
   let searchQuery = "";
   
+  let teachersVisible = false;
+  
   function viewTeacherReviews(teacher: Teacher): void {
     // Functionality to display reviews for selected teacher
     console.log(`Viewing reviews for ${teacher.name}`);
   }
   
   onMount(() => {
-    // Any initialization code can go here
+    // Set up intersection observer for teachers list
+    const teachersObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          teachersVisible = true;
+          teachersObserver.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.15 });
+    
+    // Observe teachers list
+    const teachersList = document.querySelector('.teachers-list');
+    if (teachersList) {
+      teachersObserver.observe(teachersList);
+    }
   });
 </script>
 
@@ -79,33 +97,38 @@
       </div>
 
       <div class="teachers-list">
-        {#each teachers as teacher}
-          <div class="teacher-card">
-            <div class="teacher-photo">
-              <img src={teacher.image} alt={teacher.name} />
-            </div>
-            
-            <div class="teacher-info">
-              <div class="rating">
-                {#each Array(5) as _, i}
-                  <span class="star">{i < teacher.rating ? '★' : '☆'}</span>
-                {/each}
+        {#each teachers as teacher, i}
+          {#if teachersVisible}
+            <div 
+              class="teacher-card"
+              in:fly={{ y: 30, duration: 500, delay: i * 150, easing: cubicOut }}
+            >
+              <div class="teacher-photo">
+                <img src={teacher.image} alt={teacher.name} />
               </div>
               
-              <h2 class="teacher-name">{teacher.name}</h2>
-              <p class="teacher-description">{teacher.description}</p>
-              
-              <div class="review-meta">
-                <span class="review-count">
-                  <span class="icon">📝</span> {teacher.reviewCount} отзыва
-                </span>
+              <div class="teacher-info">
+                <div class="rating">
+                  {#each Array(5) as _, i}
+                    <span class="star">{i < teacher.rating ? '★' : '☆'}</span>
+                  {/each}
+                </div>
+                
+                <h2 class="teacher-name">{teacher.name}</h2>
+                <p class="teacher-description">{teacher.description}</p>
+                
+                <div class="review-meta">
+                  <span class="review-count">
+                    <span class="icon">📝</span> {teacher.reviewCount} отзыва
+                  </span>
+                </div>
+                
+                <button class="view-reviews" on:click={() => viewTeacherReviews(teacher)}>
+                  Читать отзывы
+                </button>
               </div>
-              
-              <button class="view-reviews" on:click={() => viewTeacherReviews(teacher)}>
-                Читать отзывы
-              </button>
             </div>
-          </div>
+          {/if}
         {/each}
       </div>
     </main>

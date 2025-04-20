@@ -3,6 +3,8 @@
   import { authStore } from '$lib/services/auth';
   import { registerForEvent, unregisterFromEvent } from '$lib/services/events';
   import { goto } from '$app/navigation';
+  import { fade, fly } from 'svelte/transition';
+  import { cubicOut } from 'svelte/easing';
 
   let avatar = '/avatar.png';
   let loading = true;
@@ -10,6 +12,7 @@
   let isAuthenticated = false;
   let selectedEventId = 0;
   let isRegistering = false;
+  let eventsVisible = false;
   
   interface Event {
     id: number;
@@ -249,92 +252,117 @@
   }
   
   onMount(() => {
+    // Load events
     loadEvents();
+    
+    // Set up intersection observer for events section
+    const eventsObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          eventsVisible = true;
+          eventsObserver.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.15 });
+    
+    // Observe events section
+    const eventsSection = document.querySelector('.events-section');
+    if (eventsSection) {
+      eventsObserver.observe(eventsSection);
+    }
   });
 </script>
 
-<div class="page-container">
+<div class="afisha-page">
   <div class="container">
-    <main>
-      <div class="content-header">
-        <h2 class="main-title">Конференции<br>и мероприятия</h2>
-        
-        <div class="filters">
-          <div class="filter-group">
-            <label>По новизне</label>
-            <select class="filter-select" on:change={handleSortChange} bind:value={sortOrder}>
-              <option value="default">По умолчанию</option>
-              <option value="newest">Сначала новые</option>
-              <option value="oldest">Сначала старые</option>
-            </select>
-          </div>
+    <div class="header">
+      <h1>Афиша мероприятий</h1>
+    </div>
+    
+    <!-- Events Section -->
+    <section class="events-section">
+      <div class="events-controls">
+        <div class="filter-group">
+          <label>По новизне</label>
+          <select class="filter-select" on:change={handleSortChange} bind:value={sortOrder}>
+            <option value="default">По умолчанию</option>
+            <option value="newest">Сначала новые</option>
+            <option value="oldest">Сначала старые</option>
+          </select>
         </div>
       </div>
-
+      
       {#if loading}
         <div class="loading">Загрузка событий...</div>
+      {:else if error}
+        <div class="error">Ошибка: {error}</div>
       {:else}
-        <div class="events-list">
-          {#each events as event}
-            <div class="event-card">
-              <div class="event-image">
-                <img src={event.image} alt={event.title} onerror="this.src='/event1.png'" />
-              </div>
-              <div class="event-content">
-                <div class="event-tag">{event.tag}</div>
-                <h3 class="event-title">{event.title}</h3>
-                {#if event.start_date && event.end_date}
-                  <div class="event-dates">
-                    {#if areSameDates(event.start_date, event.end_date)}
-                      {formatDate(event.start_date)}
-                    {:else}
-                      {formatDate(event.start_date)} - {formatDate(event.end_date)}
-                    {/if}
-                  </div>
-                {/if}
-                <p class="event-description">{event.description}</p>
-                
-                {#if isAuthenticated && event.max_participants !== undefined}
-                  <div class="participants-info">
-                    <div class="participants-count">
-                      Участники: {event.current_participants} из {event.max_participants}
+        <div class="events-grid">
+          {#each events as event, i}
+            {#if eventsVisible}
+              <div 
+                class="event-card" 
+                in:fly={{ y: 30, duration: 500, delay: i * 100, easing: cubicOut }}
+              >
+                <div class="event-image">
+                  <img src={event.image} alt={event.title} onerror="this.src='/event1.png'" />
+                </div>
+                <div class="event-content">
+                  <div class="event-tag">{event.tag}</div>
+                  <h3 class="event-title">{event.title}</h3>
+                  {#if event.start_date && event.end_date}
+                    <div class="event-dates">
+                      {#if areSameDates(event.start_date, event.end_date)}
+                        {formatDate(event.start_date)}
+                      {:else}
+                        {formatDate(event.start_date)} - {formatDate(event.end_date)}
+                      {/if}
                     </div>
-                  </div>
+                  {/if}
+                  <p class="event-description">{event.description}</p>
                   
-                  <div class="registration-container">
-                    {#if event.is_registered}
-                      <button 
-                        class="unregister-button" 
-                        on:click={() => handleUnregister(event.id)}
-                        disabled={isRegistering && selectedEventId === event.id}
-                      >
-                        {isRegistering && selectedEventId === event.id ? 'Отмена регистрации...' : 'Отменить регистрацию'}
-                      </button>
-                    {:else if event.current_participants < event.max_participants}
-                      <button 
-                        class="register-button" 
-                        on:click={() => handleRegister(event.id)}
-                        disabled={isRegistering && selectedEventId === event.id}
-                      >
-                        {isRegistering && selectedEventId === event.id ? 'Регистрация...' : 'Зарегистрироваться'}
-                      </button>
-                    {:else}
-                      <button class="register-button disabled" disabled>
-                        Мест больше нет
-                      </button>
-                    {/if}
-                  </div>
-                {:else}
-                  <div class="unauthorized-message">
-                    <a href="/login?redirect=/afisha" class="login-button">Войдите, чтобы зарегистрироваться</a>
-                  </div>
-                {/if}
+                  {#if isAuthenticated && event.max_participants !== undefined}
+                    <div class="participants-info">
+                      <div class="participants-count">
+                        Участники: {event.current_participants} из {event.max_participants}
+                      </div>
+                    </div>
+                    
+                    <div class="registration-container">
+                      {#if event.is_registered}
+                        <button 
+                          class="unregister-button" 
+                          on:click={() => handleUnregister(event.id)}
+                          disabled={isRegistering && selectedEventId === event.id}
+                        >
+                          {isRegistering && selectedEventId === event.id ? 'Отмена регистрации...' : 'Отменить регистрацию'}
+                        </button>
+                      {:else if event.current_participants < event.max_participants}
+                        <button 
+                          class="register-button" 
+                          on:click={() => handleRegister(event.id)}
+                          disabled={isRegistering && selectedEventId === event.id}
+                        >
+                          {isRegistering && selectedEventId === event.id ? 'Регистрация...' : 'Зарегистрироваться'}
+                        </button>
+                      {:else}
+                        <button class="register-button disabled" disabled>
+                          Мест больше нет
+                        </button>
+                      {/if}
+                    </div>
+                  {:else}
+                    <div class="unauthorized-message">
+                      <a href="/login?redirect=/afisha" class="login-button">Войдите, чтобы зарегистрироваться</a>
+                    </div>
+                  {/if}
+                </div>
               </div>
-            </div>
+            {/if}
           {/each}
         </div>
       {/if}
-    </main>
+    </section>
   </div>
 </div>
 
@@ -374,7 +402,7 @@
     background-color: #ffffff;
   }
 
-  .page-container {
+  .afisha-page {
     width: 100%;
     background-color: #ffffff;
     min-height: 100vh;
@@ -388,7 +416,7 @@
   }
 
   /* Content Header */
-  .content-header {
+  .header {
     margin: 40px 0;
   }
 
@@ -401,7 +429,7 @@
   }
 
   /* Filters */
-  .filters {
+  .events-controls {
     display: flex;
     gap: 30px;
     margin-bottom: 30px;
@@ -435,7 +463,7 @@
   }
 
   /* Events List */
-  .events-list {
+  .events-grid {
     display: flex;
     flex-direction: column;
     gap: 30px;

@@ -3,8 +3,8 @@
   import { getUserGroup, getUserSchedule, getUserScheduleByDay } from '$lib/services/timetable';
   import { authStore } from '$lib/services/auth';
   import { goto } from '$app/navigation';
-  import { fade, slide, scale } from 'svelte/transition';
-  import { quintOut } from 'svelte/easing';
+  import { fade, slide, scale, fly } from 'svelte/transition';
+  import { quintOut, cubicOut } from 'svelte/easing';
   import type { Group, Lesson } from '$lib/services/timetable';
   
   // Активный день недели (по умолчанию - сегодняшний день)
@@ -30,6 +30,7 @@
   let schedule: Lesson[] = [];
   let filteredSchedule: Lesson[] = [];
   let isWeekTypeUpper = determineWeekType(); // true - верхняя неделя, false - нижняя неделя
+  let scheduleVisible = false;
   
   // Функция определения типа недели (верхняя/нижняя)
   function determineWeekType(): boolean {
@@ -146,6 +147,22 @@
   
   onMount(() => {
     loadSchedule();
+    
+    // Set up intersection observer for schedule contents
+    const scheduleObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          scheduleVisible = true;
+          scheduleObserver.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.15 });
+    
+    // Observe schedule container
+    const scheduleContainer = document.querySelector('.schedule-container');
+    if (scheduleContainer) {
+      scheduleObserver.observe(scheduleContainer);
+    }
   });
 </script>
 
@@ -153,67 +170,73 @@
 <div class="schedule-content">
   <!-- Содержимое страницы расписания -->
   <div class="schedule-container">
-    <h1 class="title">Расписание</h1>
-    
-    {#if selectedGroup}
-      <p class="subtitle">Группа {selectedGroup.number} {selectedGroup.name ? `(${selectedGroup.name})` : ''}</p>
-    {:else}
-      <p class="subtitle">Выберите группу в настройках профиля</p>
-    {/if}
-    
-    <!-- Дни недели -->
-    <div class="controls">
-      <div class="weekdays">
-        {#each weekDays as day}
+    {#if scheduleVisible}
+      <h1 class="title" in:fly={{ y: 20, duration: 500, delay: 0, easing: cubicOut }}>Расписание</h1>
+      
+      {#if selectedGroup}
+        <p class="subtitle" in:fly={{ y: 20, duration: 500, delay: 100, easing: cubicOut }}>Группа {selectedGroup.number} {selectedGroup.name ? `(${selectedGroup.name})` : ''}</p>
+      {:else}
+        <p class="subtitle" in:fly={{ y: 20, duration: 500, delay: 100, easing: cubicOut }}>Выберите группу в настройках профиля</p>
+      {/if}
+      
+      <!-- Дни недели -->
+      <div class="controls" in:fly={{ y: 20, duration: 500, delay: 200, easing: cubicOut }}>
+        <div class="weekdays">
+          {#each weekDays as day, i}
+            <button 
+              class="day-button {day.id === activeDay ? 'active' : ''}" 
+              on:click={() => setActiveDay(day.id)}
+              in:fly={{ y: 15, duration: 300, delay: 250 + (i * 50), easing: cubicOut }}
+            >
+              {day.name}
+            </button>
+          {/each}
+        </div>
+        
+        <div class="week-type-toggle" in:fly={{ y: 15, duration: 300, delay: 600, easing: cubicOut }}>
           <button 
-            class="day-button {day.id === activeDay ? 'active' : ''}" 
-            on:click={() => setActiveDay(day.id)}
+            class="week-type-button {isWeekTypeUpper ? 'active' : ''}" 
+            on:click={toggleWeekType}
           >
-            {day.name}
+            {isWeekTypeUpper ? 'Верхняя неделя' : 'Нижняя неделя'}
           </button>
-        {/each}
+        </div>
       </div>
       
-      <div class="week-type-toggle">
-        <button 
-          class="week-type-button {isWeekTypeUpper ? 'active' : ''}" 
-          on:click={toggleWeekType}
-        >
-          {isWeekTypeUpper ? 'Верхняя неделя' : 'Нижняя неделя'}
-        </button>
-      </div>
-    </div>
-    
-    <!-- Содержимое расписания -->
-    {#if isLoading}
-      <div class="loading" in:fade={{ duration: 200 }}>Загрузка расписания...</div>
-    {:else if error}
-      <div class="error" in:fade={{ duration: 200 }}>
-        <p>{error}</p>
-        <button class="profile-button" on:click={goToProfile}>Перейти в профиль</button>
-      </div>
-    {:else if filteredSchedule.length === 0}
-      <div class="empty-schedule" in:fade={{ duration: 200 }}>
-        <p>На выбранный день занятий нет</p>
-      </div>
-    {:else}
-      <!-- Таблица с расписанием -->
-      <div class="schedule-table">
-        {#each filteredSchedule as lesson}
-          <div class="schedule-row" in:fade={{ duration: 150 }}>
-            <div class="time">{lesson.start_time} - {lesson.end_time}</div>
-            <div class="subject">{formatSubjectName(lesson.subject.name)}</div>
-            <div class="location">
-              {#if lesson.places && lesson.places.length > 0}
-                <span class="location-label">Кабинет:</span>
-                {lesson.places.map(place => place.name).join(', ')}
-              {:else}
-                -
-              {/if}
+      <!-- Содержимое расписания -->
+      {#if isLoading}
+        <div class="loading" in:fade={{ duration: 200 }}>Загрузка расписания...</div>
+      {:else if error}
+        <div class="error" in:fly={{ y: 20, duration: 500, delay: 700, easing: cubicOut }}>
+          <p>{error}</p>
+          <button class="profile-button" on:click={goToProfile}>Перейти в профиль</button>
+        </div>
+      {:else if filteredSchedule.length === 0}
+        <div class="empty-schedule" in:fly={{ y: 20, duration: 500, delay: 700, easing: cubicOut }}>
+          <p>На выбранный день занятий нет</p>
+        </div>
+      {:else}
+        <!-- Таблица с расписанием -->
+        <div class="schedule-table" in:fly={{ y: 20, duration: 500, delay: 700, easing: cubicOut }}>
+          {#each filteredSchedule as lesson, i}
+            <div 
+              class="schedule-row" 
+              in:fly={{ y: 15, duration: 300, delay: 800 + (i * 100), easing: cubicOut }}
+            >
+              <div class="time">{lesson.start_time} - {lesson.end_time}</div>
+              <div class="subject">{formatSubjectName(lesson.subject.name)}</div>
+              <div class="location">
+                {#if lesson.places && lesson.places.length > 0}
+                  <span class="location-label">Кабинет:</span>
+                  {lesson.places.map(place => place.name).join(', ')}
+                {:else}
+                  -
+                {/if}
+              </div>
             </div>
-          </div>
-        {/each}
-      </div>
+          {/each}
+        </div>
+      {/if}
     {/if}
   </div>
 </div>
