@@ -197,15 +197,19 @@
       }
     });
 
-    // Animate stories first
-    setTimeout(() => {
-      storiesReady = true;
-      
-      // Then animate service cards after stories appear
+    // Проверяем, что мы действительно должны быть на главной странице
+    const currentPath = window.location.pathname;
+    if (currentPath === '/' || currentPath === '') {
+      // Анимируем компоненты страницы только если мы действительно на главной
       setTimeout(() => {
-        cardsReady = true;
-      }, 600);
-    }, 300);
+        storiesReady = true;
+        
+        // Then animate service cards after stories appear
+        setTimeout(() => {
+          cardsReady = true;
+        }, 600);
+      }, 300);
+    }
     
     return () => {
       // Отписаться при уничтожении компонента
