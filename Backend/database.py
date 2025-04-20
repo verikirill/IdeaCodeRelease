@@ -6,17 +6,17 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# PostgreSQL connection parameters from environment variables
-DB_HOST = os.getenv("DB_HOST", "localhost")
-DB_NAME = os.getenv("DB_NAME", "users")
-DB_USER = os.getenv("DB_USER", "admin")
-DB_PASSWORD = os.getenv("DB_PASSWORD", "z$27^7tvmsJs")
+# SQLite connection parameters
+DB_NAME = os.getenv("DB_NAME", "users.db")
 
-# Create SQLAlchemy connection URL
-SQLALCHEMY_DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}/{DB_NAME}"
+# Create SQLAlchemy connection URL for SQLite
+SQLALCHEMY_DATABASE_URL = f"sqlite:///{DB_NAME}"
 
 # Create engine and session
-engine = create_engine(SQLALCHEMY_DATABASE_URL)
+engine = create_engine(
+    SQLALCHEMY_DATABASE_URL,
+    connect_args={"check_same_thread": False}  # Необходимо для SQLite
+)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
