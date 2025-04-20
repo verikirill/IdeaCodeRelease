@@ -127,6 +127,11 @@ class CommentBase(BaseModel):
     author_id: Optional[int] = None
 
 
+class AuthorInfo(BaseModel):
+    id: int
+    username: str
+
+
 class Comment(CommentBase):
     id: int
     created_at: datetime
@@ -156,11 +161,6 @@ class PostBase(BaseModel):
 
 class PostCreate(PostBase):
     pass
-
-
-class AuthorInfo(BaseModel):
-    id: int
-    username: str
 
 
 class Post(PostBase):

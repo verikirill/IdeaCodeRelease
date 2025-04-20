@@ -41,6 +41,29 @@ def convert_post_db_to_schema(post_db: PostDB) -> Post:
         "username": post_db.author.username if post_db.author else "Неизвестный пользователь"
     }
     
+    # Преобразование комментариев
+    comments_list = []
+    if post_db.comments:
+        for comment in post_db.comments:
+            # Создаем правильную структуру для автора комментария
+            comment_author = None
+            if comment.author:
+                comment_author = AuthorInfo(
+                    id=comment.author.id,
+                    username=comment.author.username
+                )
+            
+            # Создаем объект Comment
+            comment_obj = Comment(
+                id=comment.id,
+                content=comment.content,
+                author_id=comment.author_id,
+                author=comment_author,
+                created_at=comment.created_at,
+                updated_at=comment.updated_at
+            )
+            comments_list.append(comment_obj)
+    
     # Create a Post object with the right format for likes
     post_dict = {
         "id": post_db.id,
@@ -53,7 +76,7 @@ def convert_post_db_to_schema(post_db: PostDB) -> Post:
         "created_at": post_db.created_at,
         "updated_at": post_db.updated_at,
         "likes": like_ids,
-        "comments": post_db.comments
+        "comments": comments_list
     }
     
     return Post.parse_obj(post_dict)
