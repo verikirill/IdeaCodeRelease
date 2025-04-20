@@ -13,7 +13,7 @@ from routes.dish import dish_router
 from routes.dish_category import category_router
 from routes.assistant import assistant_router
 from routes.timetable import router as timetable_router
-# from routes.ocr import router as ocr_router
+from routes.ocr import router as ocr_router
 
 
 api_router = APIRouter()
@@ -31,4 +31,4 @@ api_router.include_router(dish_router)
 api_router.include_router(category_router)
 api_router.include_router(assistant_router)
 api_router.include_router(timetable_router)
-# api_router.include_router(ocr_router)
+api_router.include_router(ocr_router)
