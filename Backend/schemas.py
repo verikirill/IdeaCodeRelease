@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr, HttpUrl
-from typing import Optional, List
+from typing import Optional, List, Dict, Any, Union
 from enum import Enum
 from datetime import datetime, date
 
@@ -137,10 +137,20 @@ class Comment(CommentBase):
         from_attributes = True
 
 
+class Category(str, Enum):
+    FLOOD = "Флудилка"
+    LOST_FOUND = "Потеряшки"
+    OVERHEARD = "Подслушано"
+    NOTES = "Конспекты"
+    USEFUL = "Полезное"
+
+
 class PostBase(BaseModel):
     title: str
     content: str
     author_id: int
+    photo_url: Optional[str] = None
+    category: Category = Category.FLOOD
 
 
 class PostCreate(PostBase):
