@@ -457,7 +457,7 @@
                           <img src="/mdi_calendar.svg" alt="Дата" /> {formatDate(post.created_at)}
                         </span>
                         <span class="meta-item likes" on:click={() => handleLikePost(post.id)}>
-                          <img src="main_page/like.svg" alt="Лайки" /> {post.likes?.length || 0}
+                          <img src="/like.svg" alt="Лайки" /> {post.likes?.length || 0}
                       </span>
                       <span class="meta-item replies">
                           <img src="/otvet.svg" alt="Ответы" /> {post.comments?.length || 0} 
@@ -524,7 +524,7 @@
                           <img src="/mdi_calendar.svg" alt="Дата" /> {formatDate(post.created_at)}
                         </span>
                         <span class="meta-item likes" on:click={() => handleLikePost(post.id)}>
-                          <img src="main_page/like.svg" alt="Лайки" /> {post.likes?.length || 0}
+                          <img src="/like.svg" alt="Лайки" /> {post.likes?.length || 0}
                       </span>
                       <span class="meta-item replies">
                           <img src="/otvet.svg" alt="Ответы" /> {post.comments?.length || 0}
@@ -1043,6 +1043,11 @@
   .meta-item img {
     width: 18px;
     height: 18px;
+  }
+
+  .meta-item.likes img {
+    width: 22px;
+    height: 22px;
   }
 
   .view-replies {

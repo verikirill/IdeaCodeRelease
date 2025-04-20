@@ -45,7 +45,7 @@
         
         <div class="service-card" on:click={navigateToNews}>
           <div class="card-icon">
-            <img src="/cute bookmark.png" alt="Новости-сторис" />
+            <img src="/main_page/cute bookmark.png" alt="Новости-сторис" />
           </div>
           <div class="card-title">Новости-сторис</div>
         </div>
