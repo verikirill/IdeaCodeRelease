@@ -19,7 +19,7 @@
       number: "512",
       building: "Б",
       title: "Аудитория 512, Корпус Б",
-      image: "/audit (1).jpg",
+      image: "/audit (1).png",
       capacity: 70,
       description: "Просторная, современная аудитория вместительностью 70 человек, отлично подойдёт для форумов и различных митапов, аудитория также очень просторная, стулья для зрителей предоставляются в ограниченном количестве"
     },
@@ -28,7 +28,7 @@
       number: "305",
       building: "А",
       title: "Аудитория 305, Корпус А",
-      image: "/audit (2).jpg",
+      image: "/audit (2).png",
       capacity: 50,
       description: "Просторная, современная аудитория вместительностью 50 человек, отлично подойдёт для форумов и различных митапов, аудитория также очень просторная, стулья для зрителей предоставляются в ограниченном количестве"
     },
@@ -37,7 +37,7 @@
       number: "401",
       building: "В",
       title: "Аудитория 401, Корпус В",
-      image: "/audit (3).jpg",
+      image: "/audit (3).png",
       capacity: 60,
       description: "Просторная, современная аудитория вместительностью 60 человек, отлично подойдёт для форумов и различных митапов, аудитория также очень просторная, стулья для зрителей предоставляются в ограниченном количестве"
     }
@@ -64,7 +64,7 @@
 <div class="booking-page">
   <div class="container">
     <div class="page-header">
-      <h1>To-Do Лист</h1>
+      <h1>Бронирование аудитории</h1>
       
       <div class="search-create">
         <div class="search">
@@ -240,20 +240,27 @@
 
   .classroom-image-container {
     position: relative;
-    width: 250px;
-    min-width: 250px;
-    height: 180px;
+    width: 200px;
+    min-width: 200px;
+    height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
+    padding-left: 30px;
   }
 
   .classroom-image {
-    width: 100%;
-    height: 100%;
+    width: 180px;
+    height: 180px;
+    overflow: hidden;
   }
 
   .classroom-image img {
     width: 100%;
     height: 100%;
     object-fit: cover;
+    border-radius: 10%;
   }
 
   .card-nav-arrow {
@@ -263,25 +270,27 @@
     width: 32px;
     height: 32px;
     border: none;
-    background: rgba(255, 255, 255, 0.8);
+    background: white;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
     z-index: 2;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   }
 
   .left-arrow {
-    left: 10px;
+    left: 5px;
   }
 
   .right-arrow {
-    right: 10px;
+    right: -16px;
   }
 
   .classroom-info {
     padding: 20px;
+    padding-left: 35px;
     display: flex;
     flex-direction: column;
   }
