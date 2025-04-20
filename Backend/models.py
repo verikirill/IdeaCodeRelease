@@ -115,6 +115,8 @@ class PostDB(Base):
     author_id = Column(Integer, ForeignKey("users.id"))
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, nullable=True)
+    photo_url = Column(String, nullable=True)
+    category = Column(String, nullable=False, default="Флудилка")
     # Relationships
     author = relationship("UserDB", back_populates="posts")
     comments = relationship("CommentDB", back_populates="post")

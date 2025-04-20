@@ -62,6 +62,7 @@
     title: string;
     image: string;
     link?: string;
+    visible?: boolean;
   }
   
   let services: Service[] = [
@@ -116,6 +117,9 @@
     }
   ];
   
+  let servicesVisible = false;
+  let serviceElements: HTMLElement[] = [];
+  
   function openStories(index: number) {
     currentStoryIndex = index;
     prevStoryIndex = index;
@@ -164,6 +168,7 @@
   }
   
   onMount(() => {
+<<<<<<< HEAD
     // Обновить аватар при загрузке страницы
     updateAvatar();
     
@@ -180,6 +185,23 @@
       // Отписаться при уничтожении компонента
       unsubscribe();
     };
+=======
+    // Set up intersection observer for services section
+    const servicesObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          servicesVisible = true;
+          servicesObserver.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.15 });
+    
+    // Observe services section
+    const servicesSection = document.querySelector('.services');
+    if (servicesSection) {
+      servicesObserver.observe(servicesSection);
+    }
+>>>>>>> 0a372622b723ba242d2b7d3246a9226c5869f828
   });
 </script>
 
@@ -202,6 +224,7 @@
       <section class="services">
         <h2>Сервисы</h2>
         <div class="services-grid">
+<<<<<<< HEAD
           {#each services as service}
             <div class="service-card" 
                  on:click={() => service.link && navigateTo(service.link)} 
@@ -211,6 +234,29 @@
                 <img src={service.image} alt={service.title} />
               </div>
             </div>
+=======
+          {#each services as service, i}
+            {#if servicesVisible}
+              <div 
+                class="service-card"
+                in:fly={{ y: 30, duration: 500, delay: i * 100, easing: cubicOut }}
+              >
+                {#if service.link}
+                  <a href={service.link} class="card-link">
+                    <h3>{service.title}</h3>
+                    <div class="service-icon">
+                      <img src={service.image} alt={service.title} />
+                    </div>
+                  </a>
+                {:else}
+                  <h3>{service.title}</h3>
+                  <div class="service-icon">
+                    <img src={service.image} alt={service.title} />
+                  </div>
+                {/if}
+              </div>
+            {/if}
+>>>>>>> 0a372622b723ba242d2b7d3246a9226c5869f828
           {/each}
         </div>
       </section>
