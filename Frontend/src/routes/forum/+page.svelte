@@ -1,50 +1,48 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { browser } from '$app/environment';
 
   interface Comment {
-    author: string;
-    text: string;
+    id: number;
+    content: string;
+    author: {
+      id: number;
+      username: string;
+    };
+    created_at: string;
   }
   
   interface Post {
     id: number;
     title: string;
-    date: string;
-    views: number;
-    replies: number;
+    content: string;
+    photo_url?: string;
+    category: string;
+    author: {
+      id: number;
+      username: string;
+    };
+    likes: any[];
     comments: Comment[];
+    created_at: string;
+    updated_at: string;
   }
   
+  const API_URL = 'http://localhost:8000';
   let avatar = '/avatar.png';
   let showNewPostForm = false;
+  let isLoading = true;
+  let error = '';
+  let isLoggedIn = false;
+  let authError = '';
   
-  let posts: Post[] = [
-    {
-      id: 1,
-      title: "Лежала на диване в Б корпусе, чья?",
-      date: "20 мая",
-      views: 120,
-      replies: 2,
-      comments: [
-        {
-          author: "Иванов Иван",
-          text: "Мне кажется, я знаю чья это тетрадка, могу передать, если нужно, что скажешь?"
-        },
-        {
-          author: "Анонимный пользователь",
-          text: "Не помню ни у кого такой"
-        }
-      ]
-    },
-    {
-      id: 2,
-      title: "Чей кейс от наушников? Т корпус",
-      date: "",
-      views: 20,
-      replies: 1,
-      comments: []
-    }
-  ];
+  let posts: Post[] = [];
+  let newPostTitle = '';
+  let newPostContent = '';
+  let newPostCategory = 'FLOOD';
+  let newPostImage: File | null = null;
+
+  let newCommentText = '';
   
   let selectedPost: Post | null = null;
   
@@ -53,16 +51,242 @@
   }
   
   function toggleNewPostForm(): void {
+    if (!isLoggedIn) {
+      authError = 'Пожалуйста, войдите в систему, чтобы создать запись';
+      return;
+    }
+    
+    authError = '';
     showNewPostForm = !showNewPostForm;
   }
-  
-  function handleSubmitPost(): void {
-    // Here would go the logic to actually submit the post
-    showNewPostForm = false;
+
+  // Get auth token from localStorage
+  function getAuthToken(): string | null {
+    if (browser) {
+      return localStorage.getItem('token');
+    }
+    return null;
+  }
+
+  // Check if user is logged in
+  function checkAuth(): boolean {
+    const token = getAuthToken();
+    return token !== null && token !== '';
+  }
+
+  // Get headers with auth token
+  function getAuthHeaders(): Headers {
+    const headers = new Headers();
+    const token = getAuthToken();
+    
+    if (token) {
+      headers.append('Authorization', `Bearer ${token}`);
+    }
+    
+    return headers;
+  }
+
+  async function fetchPosts() {
+    try {
+      isLoading = true;
+      const response = await fetch(`${API_URL}/posts`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      posts = data;
+    } catch (err) {
+      console.error('Error fetching posts:', err);
+      error = 'Не удалось загрузить посты. Пожалуйста, попробуйте позже.';
+    } finally {
+      isLoading = false;
+    }
+  }
+
+  async function handleSubmitPost() {
+    try {
+      if (!isLoggedIn) {
+        authError = 'Пожалуйста, войдите в систему, чтобы создать запись';
+        return;
+      }
+      
+      if (!newPostTitle || !newPostContent) {
+        alert('Пожалуйста, заполните все поля');
+        return;
+      }
+
+      const headers = getAuthHeaders();
+      
+      if (newPostImage) {
+        const formData = new FormData();
+        formData.append('title', newPostTitle);
+        formData.append('content', newPostContent);
+        formData.append('category', newPostCategory);
+        formData.append('file', newPostImage);
+        
+        const response = await fetch(`${API_URL}/posts/upload`, {
+          method: 'POST',
+          body: formData,
+          headers: headers,
+          credentials: 'include',
+        });
+        
+        if (!response.ok) {
+          if (response.status === 401) {
+            authError = 'Необходимо войти в систему. Пожалуйста, авторизуйтесь.';
+            return;
+          }
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+      } else {
+        // Set content type only when sending JSON
+        headers.append('Content-Type', 'application/json');
+        
+        const response = await fetch(`${API_URL}/posts`, {
+          method: 'POST',
+          headers: headers,
+          body: JSON.stringify({
+            title: newPostTitle,
+            content: newPostContent,
+            category: newPostCategory,
+          }),
+          credentials: 'include',
+        });
+        
+        if (!response.ok) {
+          if (response.status === 401) {
+            authError = 'Необходимо войти в систему. Пожалуйста, авторизуйтесь.';
+            return;
+          }
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+      }
+      
+      // Reset form and refresh posts
+      newPostTitle = '';
+      newPostContent = '';
+      newPostCategory = 'FLOOD';
+      newPostImage = null;
+      showNewPostForm = false;
+      authError = '';
+      
+      await fetchPosts();
+    } catch (err) {
+      console.error('Error creating post:', err);
+      alert('Не удалось создать пост. Пожалуйста, попробуйте позже.');
+    }
+  }
+
+  async function handleSubmitComment(postId: number) {
+    try {
+      if (!isLoggedIn) {
+        authError = 'Пожалуйста, войдите в систему, чтобы добавить комментарий';
+        return;
+      }
+      
+      if (!newCommentText) {
+        return;
+      }
+
+      const headers = getAuthHeaders();
+      headers.append('Content-Type', 'application/json');
+      
+      const response = await fetch(`${API_URL}/posts/${postId}/comments`, {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify({
+          content: newCommentText,
+        }),
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          authError = 'Необходимо войти в систему. Пожалуйста, авторизуйтесь.';
+          return;
+        }
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+
+      newCommentText = '';
+      authError = '';
+      await fetchPosts();
+      
+      // Update the selected post with the latest data
+      if (selectedPost) {
+        const postResponse = await fetch(`${API_URL}/posts/${postId}`);
+        if (postResponse.ok) {
+          const updatedPost = await postResponse.json();
+          selectedPost = updatedPost;
+        }
+      }
+    } catch (err) {
+      console.error('Error adding comment:', err);
+      alert('Не удалось добавить комментарий. Пожалуйста, попробуйте позже.');
+    }
+  }
+
+  async function handleLikePost(postId: number) {
+    try {
+      if (!isLoggedIn) {
+        authError = 'Пожалуйста, войдите в систему, чтобы поставить лайк';
+        return;
+      }
+      
+      const headers = getAuthHeaders();
+      
+      const response = await fetch(`${API_URL}/posts/${postId}/like`, {
+        method: 'POST',
+        headers: headers,
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          authError = 'Необходимо войти в систему. Пожалуйста, авторизуйтесь.';
+          return;
+        }
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+
+      authError = '';
+      await fetchPosts();
+      
+      // Update the selected post
+      if (selectedPost && selectedPost.id === postId) {
+        const postResponse = await fetch(`${API_URL}/posts/${postId}`);
+        if (postResponse.ok) {
+          selectedPost = await postResponse.json();
+        }
+      }
+    } catch (err) {
+      console.error('Error liking post:', err);
+    }
+  }
+
+  function handleFileChange(event: Event) {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files.length > 0) {
+      newPostImage = input.files[0];
+    }
+  }
+
+  function formatDate(dateString: string): string {
+    if (!dateString) return '';
+    
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat('ru-RU', {
+      day: 'numeric',
+      month: 'long'
+    }).format(date);
   }
   
   onMount(() => {
-    // Any initialization code can go here
+    // Check authentication status
+    isLoggedIn = checkAuth();
+    fetchPosts();
   });
 </script>
 
@@ -72,81 +296,135 @@
     <main>
       <div class="forum-header">
         <h1>Студенческий форум</h1>
-        <p>5000 участников</p>
+        <p>{posts.length} {posts.length === 1 ? 'запись' : posts.length >= 2 && posts.length <= 4 ? 'записи' : 'записей'}</p>
       </div>
+
+      {#if authError}
+        <div class="auth-error">
+          {authError}
+          <a href="/login" class="login-link">Войти в систему</a>
+        </div>
+      {/if}
 
       <div class="content">
         <div class="left-panel">
           <div class="section-header">
             <span class="section-icon"><img src="/3lines.svg" alt="Menu" /></span>
-            <h2>Статьи</h2>
+            <h2>Записи</h2>
           </div>
 
-          <div class="posts">
-            {#each posts as post}
-              <!-- Expanded view for selected post -->
-              {#if selectedPost && selectedPost.id === post.id}
-                <div class="post selected-post">
-                  <div class="user-avatar"></div>
-                  <div class="post-content">
-                    <div class="post-image-container">
-                      <div class="post-image-placeholder"></div>
-                    </div>
-                    <h3 class="post-title">{post.title}</h3>
-                    <div class="post-meta">
-                      <span class="meta-item date">
-                        <img src="/mdi_calendar.svg" alt="Дата" /> {post.date}
-                      </span>
-                      <span class="meta-item views">
-                        <img src="main_page/like.svg" alt="Лайки" /> {post.views}
-                      </span>
-                      <span class="meta-item replies">
-                        <img src="/otvet.svg" alt="Ответы" /> {post.replies} {post.replies === 1 ? 'ответ' : 'ответа'}
-                      </span>
-                    </div>
-                    
-                    <button class="view-replies collapse" on:click={() => viewPost(post)}>Свернуть ответы</button>
-                    
-                    <!-- Comments -->
-                    <div class="post-comments">
-                      {#each post.comments as comment}
-                        <div class="comment">
-                          <div class="user-avatar"></div>
-                          <div class="comment-content">
-                            <h4 class="comment-author">{comment.author}</h4>
-                            <p class="comment-text">{comment.text}</p>
-                          </div>
+          {#if isLoading}
+            <div class="loading">Загрузка постов...</div>
+          {:else if error}
+            <div class="error">{error}</div>
+          {:else if posts.length === 0}
+            <div class="no-posts">Пока нет записей в форуме</div>
+          {:else}
+            <div class="posts">
+              {#each posts as post}
+                <!-- Expanded view for selected post -->
+                {#if selectedPost && selectedPost.id === post.id}
+                  <div class="post selected-post">
+                    <div class="user-avatar"></div>
+                    <div class="post-content">
+                      {#if post.photo_url}
+                        <div class="post-image-container">
+                          <img src={post.photo_url} alt={post.title} class="post-image" />
                         </div>
-                      {/each}
+                      {:else}
+                        <div class="post-image-container">
+                          <div class="post-image-placeholder"></div>
+                        </div>
+                      {/if}
+                      <h3 class="post-title">{post.title}</h3>
+                      <p class="post-text">{post.content}</p>
+                      <div class="post-meta">
+                        <span class="meta-item date">
+                          <img src="/mdi_calendar.svg" alt="Дата" /> {formatDate(post.created_at)}
+                        </span>
+                        <span class="meta-item author">
+                          <img src="/user-icon.svg" alt="Автор" /> {post.author?.username || 'Аноним'}
+                        </span>
+                        <span class="meta-item likes" on:click={() => handleLikePost(post.id)}>
+                          <img src="main_page/like.svg" alt="Лайки" /> {post.likes?.length || 0}
+                        </span>
+                        <span class="meta-item replies">
+                          <img src="/otvet.svg" alt="Ответы" /> {post.comments?.length || 0} 
+                          {post.comments?.length === 1 ? 'ответ' : 
+                           post.comments?.length >= 2 && post.comments?.length <= 4 ? 'ответа' : 'ответов'}
+                        </span>
+                      </div>
+                      
+                      <button class="view-replies collapse" on:click={() => viewPost(post)}>Свернуть ответы</button>
+                      
+                      <!-- Comments -->
+                      <div class="post-comments">
+                        {#if post.comments && post.comments.length > 0}
+                          {#each post.comments as comment}
+                            <div class="comment">
+                              <div class="user-avatar"></div>
+                              <div class="comment-content">
+                                <h4 class="comment-author">{comment.author?.username || 'Аноним'}</h4>
+                                <p class="comment-text">{comment.content}</p>
+                                <div class="comment-date">{formatDate(comment.created_at)}</div>
+                              </div>
+                            </div>
+                          {/each}
+                        {:else}
+                          <div class="no-comments">
+                            <p>Пока нет комментариев</p>
+                          </div>
+                        {/if}
+
+                        <!-- Comment form -->
+                        <div class="add-comment-form">
+                          <textarea 
+                            bind:value={newCommentText} 
+                            placeholder="Добавить комментарий..."
+                          ></textarea>
+                          <button on:click={() => handleSubmitComment(post.id)}>Отправить</button>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
-              {:else}
-                <!-- Collapsed view for other posts -->
-                <div class="post">
-                  <div class="user-avatar"></div>
-                  <div class="post-content">
-                    <div class="post-image-container">
-                      <div class="post-image-placeholder"></div>
+                {:else}
+                  <!-- Collapsed view for other posts -->
+                  <div class="post">
+                    <div class="user-avatar"></div>
+                    <div class="post-content">
+                      {#if post.photo_url}
+                        <div class="post-image-container">
+                          <img src={post.photo_url} alt={post.title} class="post-image" />
+                        </div>
+                      {:else}
+                        <div class="post-image-container">
+                          <div class="post-image-placeholder"></div>
+                        </div>
+                      {/if}
+                      <h3 class="post-title">{post.title}</h3>
+                      <div class="post-meta">
+                        <span class="meta-item date">
+                          <img src="/mdi_calendar.svg" alt="Дата" /> {formatDate(post.created_at)}
+                        </span>
+                        <span class="meta-item author">
+                          <img src="/user-icon.svg" alt="Автор" /> {post.author?.username || 'Аноним'}
+                        </span>
+                        <span class="meta-item likes" on:click={() => handleLikePost(post.id)}>
+                          <img src="main_page/like.svg" alt="Лайки" /> {post.likes?.length || 0}
+                        </span>
+                        <span class="meta-item replies">
+                          <img src="/otvet.svg" alt="Ответы" /> {post.comments?.length || 0}
+                          {post.comments?.length === 1 ? 'ответ' : 
+                           post.comments?.length >= 2 && post.comments?.length <= 4 ? 'ответа' : 'ответов'}
+                        </span>
+                      </div>
+                      <button class="view-replies" on:click={() => viewPost(post)}>Смотреть подробнее</button>
                     </div>
-                    <h3 class="post-title">{post.title}</h3>
-                    <div class="post-meta">
-                      <span class="meta-item date">
-                        <img src="/mdi_calendar.svg" alt="Дата" /> {post.date}
-                      </span>
-                      <span class="meta-item views">
-                        <img src="main_page/like.svg" alt="Лайки" /> {post.views}
-                      </span>
-                      <span class="meta-item replies">
-                        <img src="/otvet.svg" alt="Ответы" /> {post.replies} {post.replies === 1 ? 'ответ' : 'ответа'}
-                      </span>
-                    </div>
-                    <button class="view-replies" on:click={() => viewPost(post)}>Смотреть ответы</button>
                   </div>
-                </div>
-              {/if}
-            {/each}
-          </div>
+                {/if}
+              {/each}
+            </div>
+          {/if}
         </div>
 
         <div class="right-panel">
@@ -176,32 +454,32 @@
             </div>
             
             <div class="topic-icons">
-              <div class="topic">
-                <div class="topic-icon">
+              <div class="topic" on:click={() => newPostCategory = 'FLOOD'}>
+                <div class="topic-icon {newPostCategory === 'FLOOD' ? 'active' : ''}">
                   <img src="/cute house.png" alt="Флудилка" class="icon-house" />
                 </div>
                 <span>Флудилка</span>
               </div>
-              <div class="topic">
-                <div class="topic-icon">
+              <div class="topic" on:click={() => newPostCategory = 'LOST_FOUND'}>
+                <div class="topic-icon {newPostCategory === 'LOST_FOUND' ? 'active' : ''}">
                   <img src="/search cute blue icon.png" alt="Потеряшки" class="icon-search" />
                 </div>
                 <span>Потеряшки</span>
               </div>
-              <div class="topic">
-                <div class="topic-icon">
+              <div class="topic" on:click={() => newPostCategory = 'OVERHEARD'}>
+                <div class="topic-icon {newPostCategory === 'OVERHEARD' ? 'active' : ''}">
                   <img src="/blue speech bubble.png" alt="Подслушано" class="icon-speech" />
                 </div>
                 <span>Подслушано</span>
               </div>
-              <div class="topic">
-                <div class="topic-icon">
+              <div class="topic" on:click={() => newPostCategory = 'NOTES'}>
+                <div class="topic-icon {newPostCategory === 'NOTES' ? 'active' : ''}">
                   <img src="/cute books.png" alt="Конспекты" class="icon-books" />
                 </div>
                 <span>Конспекты</span>
               </div>
-              <div class="topic">
-                <div class="topic-icon">
+              <div class="topic" on:click={() => newPostCategory = 'USEFUL'}>
+                <div class="topic-icon {newPostCategory === 'USEFUL' ? 'active' : ''}">
                   <img src="/thumbs up.png" alt="Полезное" class="icon-thumbs" />
                 </div>
                 <span>Полезное</span>
@@ -221,20 +499,29 @@
               <p class="form-subtitle">Заполните поля ниже</p>
               
               <div class="form-group">
+                <label>Заголовок</label>
+                <input type="text" bind:value={newPostTitle} placeholder="Введите заголовок" />
+              </div>
+              
+              <div class="form-group">
                 <label>Файл поста</label>
                 <div class="file-upload">
-                  <div class="camera-icon">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
-                      <circle cx="12" cy="13" r="4"></circle>
-                    </svg>
-                  </div>
+                  <input type="file" id="post-image" on:change={handleFileChange} accept="image/*" />
+                  <label for="post-image" class="file-upload-label">
+                    <div class="camera-icon">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                        <circle cx="12" cy="13" r="4"></circle>
+                      </svg>
+                    </div>
+                    {newPostImage ? newPostImage.name : 'Добавить изображение'}
+                  </label>
                 </div>
               </div>
               
               <div class="form-group">
                 <label>Описание к посту</label>
-                <textarea placeholder="Текст"></textarea>
+                <textarea bind:value={newPostContent} placeholder="Текст"></textarea>
               </div>
               
               <button class="publish-button" on:click={handleSubmitPost}>
@@ -781,5 +1068,146 @@
   /* Remove the modal overlay styles since we're not using it anymore */
   .modal-overlay {
     display: none;
+  }
+
+  /* Add these CSS rules to your existing styles */
+  .topic-icon.active {
+    border: 2px solid #3498db;
+    background-color: rgba(52, 152, 219, 0.1);
+  }
+  
+  .loading, .error, .no-posts {
+    padding: 20px;
+    text-align: center;
+    margin: 20px 0;
+    border-radius: 8px;
+  }
+  
+  .loading {
+    background-color: #f8f9fa;
+  }
+  
+  .error {
+    background-color: #f8d7da;
+    color: #721c24;
+  }
+  
+  .no-posts {
+    background-color: #e9ecef;
+    color: #495057;
+  }
+  
+  .post-text {
+    margin: 10px 0;
+    line-height: 1.5;
+  }
+  
+  .comment-date {
+    font-size: 0.8rem;
+    color: #6c757d;
+    margin-top: 5px;
+  }
+  
+  .no-comments {
+    text-align: center;
+    padding: 10px;
+    color: #6c757d;
+  }
+  
+  .add-comment-form {
+    margin-top: 20px;
+    border-top: 1px solid #e9ecef;
+    padding-top: 15px;
+  }
+  
+  .add-comment-form textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    margin-bottom: 10px;
+    min-height: 60px;
+  }
+  
+  .add-comment-form button {
+    background-color: #3498db;
+    color: white;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  
+  .add-comment-form button:hover {
+    background-color: #2980b9;
+  }
+  
+  .post-image {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    border-radius: 8px;
+  }
+  
+  .meta-item.author {
+    display: flex;
+    align-items: center;
+    margin-right: 15px;
+  }
+  
+  .meta-item.likes {
+    cursor: pointer;
+  }
+  
+  .file-upload {
+    position: relative;
+    display: inline-block;
+    width: 100%;
+  }
+  
+  .file-upload input[type="file"] {
+    position: absolute;
+    top: 0;
+    left: 0;
+    opacity: 0;
+    width: 0.1px;
+    height: 0.1px;
+    overflow: hidden;
+  }
+  
+  .file-upload-label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: 10px;
+    background-color: #f8f9fa;
+    border: 1px dashed #ced4da;
+    border-radius: 4px;
+    cursor: pointer;
+    min-height: 100px;
+  }
+  
+  .file-upload-label:hover {
+    background-color: #e9ecef;
+  }
+
+  /* Add these CSS rules to your existing styles */
+  .auth-error {
+    background-color: #f8d7da;
+    color: #721c24;
+    padding: 10px 15px;
+    border-radius: 5px;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .login-link {
+    color: #0066cc;
+    text-decoration: underline;
+    font-weight: bold;
+    margin-left: 10px;
   }
 </style>
