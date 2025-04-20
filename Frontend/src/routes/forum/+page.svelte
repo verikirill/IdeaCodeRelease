@@ -88,7 +88,7 @@
                         <img src="/mdi_calendar.svg" alt="Дата" /> {post.date}
                       </span>
                       <span class="meta-item views">
-                        <img src="/viev.svg" alt="Просмотры" /> {post.views}
+                        <img src="main_page/like.svg" alt="Лайки" /> {post.views}
                       </span>
                       <span class="meta-item replies">
                         <img src="/otvet.svg" alt="Ответы" /> {post.replies} {post.replies === 1 ? 'ответ' : 'ответа'}
@@ -125,7 +125,7 @@
                         <img src="/mdi_calendar.svg" alt="Дата" /> {post.date}
                       </span>
                       <span class="meta-item views">
-                        <img src="/viev.svg" alt="Просмотры" /> {post.views}
+                        <img src="main_page/like.svg" alt="Лайки" /> {post.views}
                       </span>
                       <span class="meta-item replies">
                         <img src="/otvet.svg" alt="Ответы" /> {post.replies} {post.replies === 1 ? 'ответ' : 'ответа'}

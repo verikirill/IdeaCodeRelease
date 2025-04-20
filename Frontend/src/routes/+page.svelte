@@ -2,6 +2,8 @@
   import { onMount } from 'svelte';
   import { fade, fly } from 'svelte/transition';
   import { cubicOut } from 'svelte/easing';
+  import { authStore } from '$lib/services/auth';
+  import { goto } from '$app/navigation';
   
   let avatar = '/avatar.png';
   let showStories = false;
@@ -60,13 +62,13 @@
     title: string;
     image: string;
     link?: string;
-    visible?: boolean;
   }
   
   let services: Service[] = [
     {
       title: 'Карта\nкорпусов',
-      image: '/main_page/map and pencil.png'
+      image: '/main_page/map and pencil.png',
+      link: 'https://app.profcomff.com/apps/2'
     },
     {
       title: 'Афиша\nмероприятий',
@@ -114,9 +116,6 @@
     }
   ];
   
-  let servicesVisible = false;
-  let serviceElements: HTMLElement[] = [];
-  
   function openStories(index: number) {
     currentStoryIndex = index;
     prevStoryIndex = index;
@@ -145,22 +144,42 @@
     }
   }
   
-  onMount(() => {
-    // Set up intersection observer for services section
-    const servicesObserver = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          servicesVisible = true;
-          servicesObserver.unobserve(entry.target);
-        }
-      });
-    }, { threshold: 0.15 });
-    
-    // Observe services section
-    const servicesSection = document.querySelector('.services');
-    if (servicesSection) {
-      servicesObserver.observe(servicesSection);
+  // Функция обновления аватара на основе авторизации
+  function updateAvatar() {
+    // Использовать isAuthenticated из authStore
+    if (!authStore.isAuthenticated) {
+      avatar = '/static/main_page/icon_profile.svg';
     }
+  }
+  
+  // Функция для программной навигации
+  function navigateTo(url: string) {
+    if (url.startsWith('http')) {
+      // Для внешних ссылок открываем в новой вкладке
+      window.open(url, '_blank');
+    } else {
+      // Для внутренних используем goto
+      goto(url);
+    }
+  }
+  
+  onMount(() => {
+    // Обновить аватар при загрузке страницы
+    updateAvatar();
+    
+    // Подписаться на изменения в authStore
+    const unsubscribe = authStore.isAuthenticated.subscribe(value => {
+      if (!value) {
+        avatar = '/static/main_page/icon_profile.svg';
+      } else {
+        avatar = '/avatar.png';
+      }
+    });
+    
+    return () => {
+      // Отписаться при уничтожении компонента
+      unsubscribe();
+    };
   });
 </script>
 
@@ -183,27 +202,15 @@
       <section class="services">
         <h2>Сервисы</h2>
         <div class="services-grid">
-          {#each services as service, i}
-            {#if servicesVisible}
-              <div 
-                class="service-card"
-                in:fly={{ y: 30, duration: 500, delay: i * 100, easing: cubicOut }}
-              >
-                {#if service.link}
-                  <a href={service.link} class="card-link">
-                    <h3>{service.title}</h3>
-                    <div class="service-icon">
-                      <img src={service.image} alt={service.title} />
-                    </div>
-                  </a>
-                {:else}
-                  <h3>{service.title}</h3>
-                  <div class="service-icon">
-                    <img src={service.image} alt={service.title} />
-                  </div>
-                {/if}
+          {#each services as service}
+            <div class="service-card" 
+                 on:click={() => service.link && navigateTo(service.link)} 
+                 class:clickable={service.link}>
+              <h3>{service.title}</h3>
+              <div class="service-icon">
+                <img src={service.image} alt={service.title} />
               </div>
-            {/if}
+            </div>
           {/each}
         </div>
       </section>
@@ -427,12 +434,15 @@
     justify-content: flex-start;
     aspect-ratio: 2.4 / 1;
     transition: transform 0.2s ease;
-    cursor: pointer;
     position: relative;
     text-align: left;
     margin: 0;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
     overflow: hidden;
+  }
+  
+  .service-card.clickable {
+    cursor: pointer;
   }
 
   .service-card:hover {

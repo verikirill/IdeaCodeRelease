@@ -115,6 +115,13 @@ export async function selectUserGroup(groupId: number): Promise<boolean> {
 // Функция для получения расписания пользователя
 export async function getUserSchedule(): Promise<Lesson[]> {
   try {
+    // Проверяем текущий маршрут, не запрашиваем расписание на странице знаний
+    const currentPath = window.location.pathname;
+    if (currentPath.startsWith('/knowledge')) {
+      console.log('Пропускаем загрузку расписания на странице базы знаний');
+      return [];
+    }
+    
     const token = getToken();
     if (!token) return [];
     
@@ -176,6 +183,13 @@ export async function getUserSchedule(): Promise<Lesson[]> {
 // Функция для получения расписания пользователя на сегодня
 export async function getUserScheduleToday(): Promise<Lesson[]> {
   try {
+    // Проверяем текущий маршрут, не запрашиваем расписание на странице знаний
+    const currentPath = window.location.pathname;
+    if (currentPath.startsWith('/knowledge')) {
+      console.log('Пропускаем загрузку расписания на странице базы знаний');
+      return [];
+    }
+    
     const token = getToken();
     if (!token) return [];
     
@@ -199,6 +213,13 @@ export async function getUserScheduleToday(): Promise<Lesson[]> {
 // Функция для получения расписания пользователя по дню недели
 export async function getUserScheduleByDay(weekday: number, weekType?: string): Promise<Lesson[]> {
   try {
+    // Проверяем текущий маршрут, не запрашиваем расписание на странице знаний
+    const currentPath = window.location.pathname;
+    if (currentPath.startsWith('/knowledge')) {
+      console.log('Пропускаем загрузку расписания на странице базы знаний');
+      return [];
+    }
+    
     const token = getToken();
     if (!token) return [];
     
@@ -270,6 +291,13 @@ export async function getUserScheduleByDay(weekday: number, weekType?: string): 
 // Функция для получения расписания конкретной группы
 export async function getGroupSchedule(groupId: number): Promise<Lesson[]> {
   try {
+    // Проверяем текущий маршрут, не запрашиваем расписание на странице знаний
+    const currentPath = window.location.pathname;
+    if (currentPath.startsWith('/knowledge')) {
+      console.log('Пропускаем загрузку расписания группы на странице базы знаний');
+      return [];
+    }
+    
     const response = await fetch(`${API_URL}/timetable/group/${groupId}/schedule`);
     
     if (!response.ok) {
