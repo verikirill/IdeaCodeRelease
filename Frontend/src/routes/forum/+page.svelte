@@ -57,6 +57,8 @@
   };
   
   let selectedCategoryFilter: string | null = null;
+  // Реактивная переменная для отфильтрованных постов
+  $: filteredPosts = getFilteredPosts(posts, selectedCategoryFilter);
   
   function viewPost(post: Post): void {
     selectedPost = selectedPost?.id === post.id ? null : post;
@@ -350,11 +352,13 @@
     selectedCategoryFilter = category === selectedCategoryFilter ? null : category;
   }
 
-  function getFilteredPosts(): Post[] {
-    if (!selectedCategoryFilter) {
-      return posts;
+  function getFilteredPosts(allPosts: Post[], filter: string | null): Post[] {
+    if (!filter) {
+      return allPosts;
     }
-    return posts.filter(post => post.category === selectedCategoryFilter);
+    
+    // Фильтруем посты по выбранной категории
+    return allPosts.filter(post => post.category === filter);
   }
   
   onMount(() => {
@@ -389,44 +393,12 @@
             <h2>Записи</h2>
           </div>
 
-          <div class="category-filters">
-            <button 
-              class="filter-btn {selectedCategoryFilter === null ? 'active' : ''}" 
-              on:click={() => filterPostsByCategory(null)}
-            >
-              Все
-            </button>
-            <button 
-              class="filter-btn {selectedCategoryFilter === 'Флудилка' ? 'active' : ''}" 
-              on:click={() => filterPostsByCategory('Флудилка')}
-            >
-              Флудилка
-            </button>
-            <button 
-              class="filter-btn {selectedCategoryFilter === 'Потеряшки' ? 'active' : ''}" 
-              on:click={() => filterPostsByCategory('Потеряшки')}
-            >
-              Потеряшки
-            </button>
-            <button 
-              class="filter-btn {selectedCategoryFilter === 'Подслушано' ? 'active' : ''}" 
-              on:click={() => filterPostsByCategory('Подслушано')}
-            >
-              Подслушано
-            </button>
-            <button 
-              class="filter-btn {selectedCategoryFilter === 'Конспекты' ? 'active' : ''}" 
-              on:click={() => filterPostsByCategory('Конспекты')}
-            >
-              Конспекты
-            </button>
-            <button 
-              class="filter-btn {selectedCategoryFilter === 'Полезное' ? 'active' : ''}" 
-              on:click={() => filterPostsByCategory('Полезное')}
-            >
-              Полезное
-            </button>
-          </div>
+          {#if selectedCategoryFilter}
+            <div class="selected-filter-indicator">
+              Категория: <span class="filter-name">{getCategoryDisplayName(selectedCategoryFilter)}</span>
+              <button class="clear-filter" on:click={() => filterPostsByCategory(null)}>×</button>
+            </div>
+          {/if}
 
           {#if isLoading}
             <div class="loading">Загрузка постов...</div>
@@ -436,7 +408,7 @@
             <div class="no-posts">Пока нет записей в форуме</div>
           {:else}
             <div class="posts">
-              {#each getFilteredPosts() as post}
+              {#each filteredPosts as post}
                 <!-- Expanded view for selected post -->
                 {#if selectedPost && selectedPost.id === post.id}
                   <div class="post selected-post">
@@ -575,35 +547,41 @@
             </div>
             
             <div class="topic-icons">
-              <div class="topic" on:click={() => newPostCategory = 'Флудилка'}>
-                <div class="topic-icon {newPostCategory === 'Флудилка' ? 'active' : ''}">
+              <div class="topic" on:click={() => filterPostsByCategory('Флудилка')}>
+                <div class="topic-icon {selectedCategoryFilter === 'Флудилка' ? 'active' : ''}">
                   <img src="/cute house.png" alt="Флудилка" class="icon-house" />
                 </div>
                 <span>Флудилка</span>
               </div>
-              <div class="topic" on:click={() => newPostCategory = 'Потеряшки'}>
-                <div class="topic-icon {newPostCategory === 'Потеряшки' ? 'active' : ''}">
+              <div class="topic" on:click={() => filterPostsByCategory('Потеряшки')}>
+                <div class="topic-icon {selectedCategoryFilter === 'Потеряшки' ? 'active' : ''}">
                   <img src="/search cute blue icon.png" alt="Потеряшки" class="icon-search" />
                 </div>
                 <span>Потеряшки</span>
               </div>
-              <div class="topic" on:click={() => newPostCategory = 'Подслушано'}>
-                <div class="topic-icon {newPostCategory === 'Подслушано' ? 'active' : ''}">
+              <div class="topic" on:click={() => filterPostsByCategory('Подслушано')}>
+                <div class="topic-icon {selectedCategoryFilter === 'Подслушано' ? 'active' : ''}">
                   <img src="/blue speech bubble.png" alt="Подслушано" class="icon-speech" />
                 </div>
                 <span>Подслушано</span>
               </div>
-              <div class="topic" on:click={() => newPostCategory = 'Конспекты'}>
-                <div class="topic-icon {newPostCategory === 'Конспекты' ? 'active' : ''}">
+              <div class="topic" on:click={() => filterPostsByCategory('Конспекты')}>
+                <div class="topic-icon {selectedCategoryFilter === 'Конспекты' ? 'active' : ''}">
                   <img src="/cute books.png" alt="Конспекты" class="icon-books" />
                 </div>
                 <span>Конспекты</span>
               </div>
-              <div class="topic" on:click={() => newPostCategory = 'Полезное'}>
-                <div class="topic-icon {newPostCategory === 'Полезное' ? 'active' : ''}">
+              <div class="topic" on:click={() => filterPostsByCategory('Полезное')}>
+                <div class="topic-icon {selectedCategoryFilter === 'Полезное' ? 'active' : ''}">
                   <img src="/thumbs up.png" alt="Полезное" class="icon-thumbs" />
                 </div>
                 <span>Полезное</span>
+              </div>
+              <div class="topic" on:click={() => filterPostsByCategory(null)}>
+                <div class="topic-icon {selectedCategoryFilter === null ? 'active' : ''}">
+                  <img src="/3lines.svg" alt="Все" />
+                </div>
+                <span>Все</span>
               </div>
             </div>
           </div>
@@ -965,7 +943,8 @@
 
   .post-image-container {
     display: flex;
-    justify-content: flex-start;
+    justify-content: center;
+    align-items: center;
     width: 100%;
     height: 200px;
     background-color: #f5f5f5;
@@ -976,9 +955,8 @@
 
   .post-image {
     max-width: 100%;
-    max-height: 100%;
+    max-height: 200px;
     object-fit: contain;
-    margin: 0 auto;
   }
 
   .post-image-placeholder {
@@ -1034,6 +1012,7 @@
     justify-content: space-between;
     margin-top: 15px;
     gap: 10px;
+    flex-wrap: wrap;
   }
 
   .topic {
@@ -1042,6 +1021,17 @@
     align-items: center;
     gap: 8px;
     font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    padding: 8px;
+    border-radius: 10px;
+    background-color: rgba(255, 255, 255, 0.5);
+  }
+  
+  .topic:hover {
+    transform: translateY(-3px);
+    background-color: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   }
 
   .topic-icon {
@@ -1051,7 +1041,15 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background-color: #c0c0c0;
+    background-color: #e0e0e0;
+    transition: all 0.2s;
+    border: 2px solid transparent;
+  }
+
+  .topic-icon.active {
+    border: 2px solid #1A3882;
+    background-color: rgba(26, 56, 130, 0.1);
+    box-shadow: 0 0 10px rgba(26, 56, 130, 0.3);
   }
 
   .topic-icon img {
@@ -1269,12 +1267,39 @@
     display: none;
   }
 
-  /* Add these CSS rules to your existing styles */
-  .topic-icon.active {
-    border: 2px solid #3498db;
-    background-color: rgba(52, 152, 219, 0.1);
+  /* Selected category indicator */
+  .selected-filter-indicator {
+    display: flex;
+    align-items: center;
+    background-color: #e9f5ff;
+    border-radius: 8px;
+    padding: 8px 12px;
+    margin-bottom: 15px;
+    font-size: 14px;
   }
-  
+
+  .filter-name {
+    font-weight: 500;
+    color: #1A3882;
+    margin: 0 5px;
+  }
+
+  .clear-filter {
+    margin-left: auto;
+    background: none;
+    border: none;
+    color: #1A3882;
+    font-size: 18px;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0 5px;
+  }
+
+  .clear-filter:hover {
+    color: #ff4757;
+  }
+
+  /* Loading and error states */
   .loading, .error, .no-posts {
     padding: 20px;
     text-align: center;
@@ -1296,6 +1321,7 @@
     color: #495057;
   }
   
+  /* Posts content */
   .post-text {
     margin: 10px 0;
     line-height: 1.5;
@@ -1358,6 +1384,7 @@
     cursor: pointer;
   }
   
+  /* File uploads */
   .file-upload {
     position: relative;
     display: inline-block;
@@ -1392,8 +1419,8 @@
     background-color: #e9ecef;
     border-color: #3498db;
   }
-
-  /* Add these CSS rules to your existing styles */
+  
+  /* Auth error */
   .auth-error {
     background-color: #f8d7da;
     color: #721c24;
@@ -1411,8 +1438,8 @@
     font-weight: bold;
     margin-left: 10px;
   }
-
-  /* Enhanced form styling */
+  
+  /* Form styling */
   .styled-input {
     width: 100%;
     padding: 12px 15px;
@@ -1548,7 +1575,7 @@
     display: block;
   }
   
-  /* Title input field - shorter version */
+  /* Title input field */
   .title-input {
     max-width: 400px;
     font-weight: 500;
@@ -1585,35 +1612,7 @@
   .cancel-button:hover {
     background-color: #e9ecef;
   }
-
-  /* Add category filters at the top of the posts section */
-  .category-filters {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin-bottom: 20px;
-  }
-
-  .filter-btn {
-    background-color: #f0f0f0;
-    border: none;
-    border-radius: 20px;
-    padding: 8px 16px;
-    font-size: 14px;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-
-  .filter-btn.active {
-    background-color: #1A3882;
-    color: white;
-  }
-
-  .filter-btn:hover {
-    background-color: #1A3882;
-    color: white;
-  }
-
+  
   .post-author {
     margin-top: 10px;
     font-size: 14px;
