@@ -10,6 +10,7 @@
     author?: {
       id: number;
       username: string;
+      avatar?: string;
     };
     created_at: string;
     updated_at?: string;
@@ -25,6 +26,7 @@
     author?: {
       id: number;
       username: string;
+      avatar?: string;
     };
     likes: number[];
     comments: Comment[];
@@ -33,7 +35,7 @@
   }
   
   const API_URL = 'http://localhost:8000';
-  let avatar = '/avatar.png';
+  let avatar = '/default-avatar.png';
   let showNewPostForm = false;
   let isLoading = true;
   let error = '';
@@ -80,13 +82,13 @@
   }
 
   // Подписываемся на изменения в authStore
-  authStore.token.subscribe((value) => {
+  const tokenUnsubscribe = authStore.token.subscribe((value) => {
     token = value || '';
     isLoggedIn = !!value;
     console.log('Auth token updated:', !!token);
   });
 
-  authStore.user.subscribe((value) => {
+  const userUnsubscribe = authStore.user.subscribe((value) => {
     currentUser = value;
     console.log('Current user updated:', currentUser?.username);
   });
@@ -332,7 +334,14 @@
         return;
       }
       
-      const response = await fetch(`${API_URL}/posts/${postId}/like`, {
+      // Check if the post is already liked by the current user
+      const post = posts.find(p => p.id === postId);
+      if (!post) return;
+      
+      const isLiked = currentUser && post.likes.includes(currentUser.id);
+      const endpoint = isLiked ? `${API_URL}/posts/${postId}/unlike` : `${API_URL}/posts/${postId}/like`;
+      
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -414,13 +423,51 @@
     return allPosts.filter(post => post.category === filter);
   }
   
+  // Helper function to get author avatar URL 
+  function getAuthorAvatar(author: { id: number; username: string; avatar?: string; } | undefined): string {
+    if (!author) return 'https://ui-avatars.com/api/?name=Аноним&background=random';
+    
+    if (author.avatar) {
+      // Handle absolute URLs (starting with http)
+      if (author.avatar.startsWith('http')) {
+        return author.avatar;
+      } 
+      // Handle paths with /static
+      else if (author.avatar.includes('/static/avatars/')) {
+        // Extract filename from the path
+        const filename = author.avatar.split('/').pop();
+        return `backend/static/avatars/${filename}`;
+      }
+      // Handle just the filename
+      else {
+        return `backend/static/avatars/${author.avatar}`;
+      }
+    }
+    
+    // Generate avatar with initials if no avatar is available
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(author.username)}&background=random`;
+  }
+
+  function handleImageError(event: Event) {
+    const img = event.target as HTMLImageElement;
+    img.src = 'https://ui-avatars.com/api/?name=Студент&background=random';
+  }
+  
+  onMount(() => {
+    return () => {
+      tokenUnsubscribe();
+      userUnsubscribe();
+    };
+  });
+
   onMount(async () => {
     // Обновляем состояние аутентификации при загрузке страницы
     token = getAuthToken();
     isLoggedIn = !!token;
     
-    // Если есть токен в куки, но нет в authStore, синхронизируем
-    if (token && !authStore.token) {
+    // Если есть токен в куки, но нет в authStore
+    if (token) {
+      // Правильно устанавливаем токен
       authStore.token.set(token);
     }
     
@@ -500,7 +547,9 @@
               <!-- Expanded view for selected post -->
               {#if selectedPost && selectedPost.id === post.id}
                 <div class="post selected-post">
-                  <div class="user-avatar"></div>
+                  <div class="user-avatar">
+                    <img src={getAuthorAvatar(post.author)} alt="Avatar" class="avatar-img" on:error={handleImageError} />
+                  </div>
                   <div class="post-content">
                       {#if post.photo_url}
                         <div class="post-image-container" style="--bg-image: url({post.photo_url})">
@@ -513,33 +562,35 @@
                       {/if}
                     <h3 class="post-title">{post.title}</h3>
                       <div class="post-category">{getCategoryDisplayName(post.category)}</div>
-                      <p class="post-text">{post.content}</p>
+                      
+                      <p class="post-text"><strong>Описание:</strong> {post.content}</p>
                     <div class="post-meta">
                       <span class="meta-item date">
                           <img src="/mdi_calendar.svg" alt="Дата" /> {formatDate(post.created_at)}
-                        </span>
-                        <span class="meta-item likes" on:click={() => handleLikePost(post.id)}>
+                      </span>
+                      <span class="meta-item author">
+                        <img src="/user-icon.svg" alt="Автор" /> {post.author?.username || 'Аноним'}
+                      </span>
+                      <span class="meta-item likes {currentUser && post.likes?.includes(currentUser.id) ? 'liked' : ''}" on:click={() => handleLikePost(post.id)}>
                           <img src="/like.svg" alt="Лайки" /> {post.likes?.length || 0}
                       </span>
                       <span class="meta-item replies">
                           <img src="/otvet.svg" alt="Ответы" /> {post.comments?.length || 0} 
                           {post.comments?.length === 1 ? 'ответ' : 
                            post.comments?.length >= 2 && post.comments?.length <= 4 ? 'ответа' : 'ответов'}
-                        </span>
-                      </div>
+                      </span>
+                    </div>
                       
-                      <div class="post-author">
-                        <img src="/user-icon.svg" alt="Автор" /> {post.author?.username || 'Аноним'}
-                      </div>
+                    <button class="view-replies collapse" on:click={() => viewPost(post)}>Свернуть ответы</button>
                       
-                      <button class="view-replies collapse" on:click={() => viewPost(post)}>Свернуть ответы</button>
-                      
-                      <!-- Comments -->
-                      <div class="post-comments">
-                        {#if post.comments && post.comments.length > 0}
+                    <!-- Comments -->
+                    <div class="post-comments">
+                      {#if post.comments && post.comments.length > 0}
                       {#each post.comments as comment}
                         <div class="comment">
-                          <div class="user-avatar"></div>
+                          <div class="user-avatar">
+                            <img src={getAuthorAvatar(comment.author)} alt="Avatar" class="avatar-img" on:error={handleImageError} />
+                          </div>
                           <div class="comment-content">
                                 <h4 class="comment-author">{comment.author?.username || 'Аноним'}</h4>
                                 <p class="comment-text">{comment.content}</p>
@@ -568,7 +619,9 @@
               {:else}
                 <!-- Collapsed view for other posts -->
                 <div class="post">
-                  <div class="user-avatar"></div>
+                  <div class="user-avatar">
+                    <img src={getAuthorAvatar(post.author)} alt="Avatar" class="avatar-img" on:error={handleImageError} />
+                  </div>
                   <div class="post-content">
                       {#if post.photo_url}
                         <div class="post-image-container" style="--bg-image: url({post.photo_url})">
@@ -581,25 +634,25 @@
                       {/if}
                     <h3 class="post-title">{post.title}</h3>
                       <div class="post-category">{getCategoryDisplayName(post.category)}</div>
+                      
                     <div class="post-meta">
                       <span class="meta-item date">
                           <img src="/mdi_calendar.svg" alt="Дата" /> {formatDate(post.created_at)}
-                        </span>
-                        <span class="meta-item likes" on:click={() => handleLikePost(post.id)}>
+                      </span>
+                      <span class="meta-item author">
+                        <img src="/user-icon.svg" alt="Автор" /> {post.author?.username || 'Аноним'}
+                      </span>
+                      <span class="meta-item likes {currentUser && post.likes?.includes(currentUser.id) ? 'liked' : ''}" on:click={() => handleLikePost(post.id)}>
                           <img src="/like.svg" alt="Лайки" /> {post.likes?.length || 0}
                       </span>
                       <span class="meta-item replies">
                           <img src="/otvet.svg" alt="Ответы" /> {post.comments?.length || 0}
                           {post.comments?.length === 1 ? 'ответ' : 
                            post.comments?.length >= 2 && post.comments?.length <= 4 ? 'ответа' : 'ответов'}
-                        </span>
-                      </div>
+                      </span>
+                    </div>
                       
-                      <div class="post-author">
-                        <img src="/user-icon.svg" alt="Автор" /> {post.author?.username || 'Аноним'}
-                      </div>
-                      
-                      <button class="view-replies" on:click={() => viewPost(post)}>Комментарии</button>
+                    <button class="view-replies" on:click={() => viewPost(post)}>Комментарии</button>
                   </div>
                 </div>
               {/if}
@@ -1021,6 +1074,16 @@
     background-color: #ffffff;
     flex-shrink: 0;
     margin-top: 5px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .avatar-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
   }
 
   .post-content {
@@ -1102,14 +1165,30 @@
     gap: 5px;
   }
 
+  .meta-item.author {
+    margin-right: 15px;
+  }
+
+  .meta-item.likes {
+    cursor: pointer;
+    transition: transform 0.1s;
+  }
+  
+  .meta-item.likes:hover {
+    transform: scale(1.1);
+  }
+  
+  .meta-item.likes.liked {
+    color: #e74c3c;
+  }
+  
+  .meta-item.likes.liked img {
+    filter: brightness(0) saturate(100%) invert(43%) sepia(91%) saturate(1352%) hue-rotate(338deg) brightness(87%) contrast(96%);
+  }
+
   .meta-item img {
     width: 18px;
     height: 18px;
-  }
-
-  .meta-item.likes img {
-    width: 22px;
-    height: 22px;
   }
 
   .view-replies {
@@ -1340,16 +1419,40 @@
   }
 
   .file-upload {
-    width: 100px;
-    height: 100px;
-    background-color: #E8E8E8;
-    border-radius: 10px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    cursor: pointer;
+    position: relative;
+    display: inline-block;
+    width: 100%;
   }
-
+  
+  .file-upload input[type="file"] {
+    position: absolute;
+    top: 0;
+    left: 0;
+    opacity: 0;
+    width: 0.1px;
+    height: 0.1px;
+    overflow: hidden;
+  }
+  
+  .file-upload-label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: 10px;
+    background-color: #f8f9fa;
+    border: 1px dashed #ced4da;
+    border-radius: 8px;
+    cursor: pointer;
+    min-height: 100px;
+    transition: all 0.2s ease;
+  }
+  
+  .file-upload-label:hover {
+    background-color: #e9ecef;
+    border-color: #3498db;
+  }
+  
   .camera-icon {
     color: #6C81A6;
   }
@@ -1381,11 +1484,6 @@
 
   .publish-button:hover {
     background-color: #6372A0;
-  }
-
-  /* Remove the modal overlay styles since we're not using it anymore */
-  .modal-overlay {
-    display: none;
   }
 
   /* Selected category indicator */
@@ -1493,78 +1591,6 @@
     height: 200px;
     object-fit: cover;
     border-radius: 8px;
-  }
-  
-  /* Стиль для блока автора */
-  .post-author {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 14px;
-    color: #666;
-    margin: 12px 0;
-    padding: 4px 0;
-    flex-wrap: nowrap;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .post-author img {
-    width: 18px;
-    height: 18px;
-    flex-shrink: 0;
-  }
-  
-  .view-replies {
-    background-color: #1A3882;
-    border: none;
-    border-radius: 12px;
-    padding: 8px 0;
-    width: 45%;
-    cursor: pointer;
-    font-size: 14px;
-    color: #fff;
-    text-align: center;
-    margin-left: 10%;
-    margin-top: 10px;
-    display: block;
-  }
-
-  /* File uploads */
-  .file-upload {
-    position: relative;
-    display: inline-block;
-    width: 100%;
-  }
-  
-  .file-upload input[type="file"] {
-    position: absolute;
-    top: 0;
-    left: 0;
-    opacity: 0;
-    width: 0.1px;
-    height: 0.1px;
-    overflow: hidden;
-  }
-  
-  .file-upload-label {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    padding: 10px;
-    background-color: #f8f9fa;
-    border: 1px dashed #ced4da;
-    border-radius: 8px;
-    cursor: pointer;
-    min-height: 100px;
-    transition: all 0.2s ease;
-  }
-  
-  .file-upload-label:hover {
-    background-color: #e9ecef;
-    border-color: #3498db;
   }
   
   /* Auth error */
