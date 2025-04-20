@@ -15,17 +15,19 @@
   let isLoading = false;
 
   onMount(() => {
-    // Проверяем, авторизован ли пользователь
-    const unsubAuth = authStore.isAuthenticated.subscribe((isAuth) => {
-      if (isAuth) {
-        // Если авторизован, перенаправляем на главную
-        goto('/');
-      }
-    });
-    
-    return () => {
-      unsubAuth();
-    };
+    // Проверяем, находимся ли мы на странице логина, и только потом проверяем авторизацию
+    if (isLoginPage) {
+      const unsubAuth = authStore.isAuthenticated.subscribe((isAuth) => {
+        if (isAuth) {
+          // Если авторизован и находимся на странице логина, перенаправляем на главную
+          goto('/');
+        }
+      });
+      
+      return () => {
+        unsubAuth();
+      };
+    }
   });
 
   async function handleLogin() {
@@ -45,8 +47,11 @@
         return;
       }
       
-      // Перенаправляем на главную страницу после успешного входа
-      goto('/');
+      // Проверяем еще раз текущий маршрут перед перенаправлением
+      if (isLoginPage) {
+        // Перенаправляем на главную страницу после успешного входа
+        goto('/');
+      }
     } catch (error) {
       console.error('Ошибка при входе:', error);
       errorMessage = 'Произошла ошибка при подключении к серверу';

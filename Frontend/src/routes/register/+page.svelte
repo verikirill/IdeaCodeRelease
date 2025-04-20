@@ -1,35 +1,39 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
-  import { authStore } from '$lib/services/auth';
   import { page } from '$app/stores';
+  import { authStore } from '$lib/services/auth';
 
   // Добавляем проверку на текущий маршрут
   $: isRegisterPage = $page.url.pathname === '/register';
 
+  let email = '';
+  let username = '';
   let firstName = '';
   let lastName = '';
-  let username = '';
-  let email = '';
   let password = '';
   let confirmPassword = '';
+  let gender = '';
+  let role = '';
   let passwordInput: HTMLInputElement;
   let confirmPasswordInput: HTMLInputElement;
   let errorMessage = '';
   let isLoading = false;
 
   onMount(() => {
-    // Проверяем, авторизован ли пользователь
-    const unsubAuth = authStore.isAuthenticated.subscribe((isAuth) => {
-      if (isAuth) {
-        // Если авторизован, перенаправляем на главную
-        goto('/');
-      }
-    });
-    
-    return () => {
-      unsubAuth();
-    };
+    // Проверяем, находимся ли мы на странице регистрации, и только потом проверяем авторизацию
+    if (isRegisterPage) {
+      const unsubAuth = authStore.isAuthenticated.subscribe((isAuth) => {
+        if (isAuth) {
+          // Если авторизован и мы на странице регистрации, перенаправляем на главную
+          goto('/');
+        }
+      });
+      
+      return () => {
+        unsubAuth();
+      };
+    }
   });
 
   async function handleRegister() {
