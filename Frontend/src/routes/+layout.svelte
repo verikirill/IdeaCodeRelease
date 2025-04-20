@@ -11,12 +11,33 @@
   $: isProfilePage = $page.url.pathname === '/profile' || $page.url.pathname === '/account';
   $: isAdminPanelPage = $page.url.pathname === '/admin_panel';
 
+  let currentPath = '';
+
+  // Функция для получения cookie
+  function getCookie(name: string): string | null {
+    if (!browser) return null;
+    
+    const nameEQ = name + '=';
+    const ca = document.cookie.split(';');
+    for (let i = 0; i < ca.length; i++) {
+      let c = ca[i].trim();
+      if (c.indexOf(nameEQ) === 0) {
+        return c.substring(nameEQ.length, c.length);
+      }
+    }
+    return null;
+  }
+
   onMount(async () => {
     if (browser) {
-      // Проверяем, есть ли сохраненный токен
-      const savedToken = localStorage.getItem('access_token');
-      if (savedToken) {
-        // Если токен существует, попробуем восстановить данные пользователя
+      // Сохраняем текущий путь для предотвращения нежелательных перенаправлений
+      currentPath = window.location.pathname;
+      
+      // Проверяем, есть ли сохраненный токен и не находимся ли мы на странице авторизации
+      const savedToken = getCookie('access_token');
+      if (savedToken && !isAuthPage) {
+        // Если токен существует и мы не на странице авторизации, 
+        // попробуем восстановить данные пользователя без перенаправления
         await authStore.fetchUserData();
       }
     }

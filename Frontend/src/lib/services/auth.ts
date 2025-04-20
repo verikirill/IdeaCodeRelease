@@ -40,11 +40,40 @@ export interface AuthResponse {
 // API URL
 const API_URL = 'http://localhost:8000'; // Базовый URL API
 
+// Вспомогательные функции для работы с cookies
+function setCookie(name: string, value: string, days = 7): void {
+  if (!browser) return;
+  
+  const expires = new Date();
+  expires.setTime(expires.getTime() + days * 24 * 60 * 60 * 1000);
+  document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/;SameSite=Strict`;
+}
+
+function getCookie(name: string): string | null {
+  if (!browser) return null;
+  
+  const nameEQ = name + '=';
+  const ca = document.cookie.split(';');
+  for (let i = 0; i < ca.length; i++) {
+    let c = ca[i].trim();
+    if (c.indexOf(nameEQ) === 0) {
+      return c.substring(nameEQ.length, c.length);
+    }
+  }
+  return null;
+}
+
+function deleteCookie(name: string): void {
+  if (!browser) return;
+  
+  document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;SameSite=Strict`;
+}
+
 // Инициализируем хранилища
 const createAuthStore = () => {
-  // Загружаем начальные значения из localStorage (если в браузере)
-  const initialToken = browser ? localStorage.getItem('access_token') : null;
-  const initialUser = browser ? JSON.parse(localStorage.getItem('user') || 'null') : null;
+  // Загружаем начальные значения из cookies (если в браузере)
+  const initialToken = browser ? getCookie('access_token') : null;
+  const initialUser = browser ? JSON.parse(getCookie('user_data') || 'null') : null;
   
   // Создаем Svelte хранилища
   const token = writable<string | null>(initialToken);
@@ -78,7 +107,7 @@ const createAuthStore = () => {
       token.set(data.access_token);
       
       if (browser) {
-        localStorage.setItem('access_token', data.access_token);
+        setCookie('access_token', data.access_token);
       }
       
       // Получаем данные пользователя после успешного логина
@@ -111,6 +140,20 @@ const createAuthStore = () => {
       });
       
       if (!response.ok) {
+        // Если получили 401 Unauthorized, очищаем токен и данные пользователя
+        if (response.status === 401) {
+          token.set(null);
+          user.set(null);
+          
+          if (browser) {
+            deleteCookie('access_token');
+            deleteCookie('user_data');
+          }
+          
+          // Но НЕ делаем автоматическое перенаправление на страницу логина
+          return null;
+        }
+        
         throw new Error('Не удалось получить данные пользователя');
       }
       
@@ -118,7 +161,7 @@ const createAuthStore = () => {
       user.set(userData);
       
       if (browser) {
-        localStorage.setItem('user', JSON.stringify(userData));
+        setCookie('user_data', JSON.stringify(userData));
       }
       
       return userData;
@@ -126,7 +169,7 @@ const createAuthStore = () => {
       console.error('Error fetching user data:', error);
       // Если запрос не удался, попробуем использовать кэшированные данные
       if (browser) {
-        const cachedUser = localStorage.getItem('user');
+        const cachedUser = getCookie('user_data');
         if (cachedUser) {
           const userData = JSON.parse(cachedUser);
           user.set(userData);
@@ -168,7 +211,7 @@ const createAuthStore = () => {
       user.set(updatedUser);
       
       if (browser) {
-        localStorage.setItem('user', JSON.stringify(updatedUser));
+        setCookie('user_data', JSON.stringify(updatedUser));
       }
       
       return true;
@@ -212,7 +255,7 @@ const createAuthStore = () => {
       user.set(updatedUser);
       
       if (browser) {
-        localStorage.setItem('user', JSON.stringify(updatedUser));
+        setCookie('user_data', JSON.stringify(updatedUser));
       }
       
       return true;
@@ -240,7 +283,7 @@ const createAuthStore = () => {
       
       const userData = await response.json();
       if (browser) {
-        localStorage.setItem('user', JSON.stringify(userData));
+        setCookie('user_data', JSON.stringify(userData));
       }
       
       return true;
@@ -256,11 +299,16 @@ const createAuthStore = () => {
     user.set(null);
     
     if (browser) {
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('user');
+      deleteCookie('access_token');
+      deleteCookie('user_data');
+      
+      // Получаем текущий путь
+      const currentPath = window.location.pathname;
+      // Перенаправляем на страницу логина только если мы не на странице логина или регистрации
+      if (currentPath !== '/login' && currentPath !== '/register') {
+        goto('/login');
+      }
     }
-    
-    goto('/login');
   }
   
   return {
