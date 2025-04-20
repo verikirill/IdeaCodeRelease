@@ -56,6 +56,10 @@
     'Полезное': 'Полезное'
   };
   
+  let selectedCategoryFilter: string | null = null;
+  // Реактивная переменная для отфильтрованных постов
+  $: filteredPosts = getFilteredPosts(posts, selectedCategoryFilter);
+  
   function viewPost(post: Post): void {
     selectedPost = selectedPost?.id === post.id ? null : post;
   }
@@ -344,6 +348,19 @@
     return categoryLabels[category] || category;
   }
   
+  function filterPostsByCategory(category: string | null): void {
+    selectedCategoryFilter = category === selectedCategoryFilter ? null : category;
+  }
+
+  function getFilteredPosts(allPosts: Post[], filter: string | null): Post[] {
+    if (!filter) {
+      return allPosts;
+    }
+    
+    // Фильтруем посты по выбранной категории
+    return allPosts.filter(post => post.category === filter);
+  }
+  
   onMount(() => {
     isLoggedIn = checkAuth();
     if (isLoggedIn) {
@@ -376,6 +393,13 @@
             <h2>Записи</h2>
           </div>
 
+          {#if selectedCategoryFilter}
+            <div class="selected-filter-indicator">
+              Категория: <span class="filter-name">{getCategoryDisplayName(selectedCategoryFilter)}</span>
+              <button class="clear-filter" on:click={() => filterPostsByCategory(null)}>×</button>
+            </div>
+          {/if}
+
           {#if isLoading}
             <div class="loading">Загрузка постов...</div>
           {:else if error}
@@ -383,57 +407,57 @@
           {:else if posts.length === 0}
             <div class="no-posts">Пока нет записей в форуме</div>
           {:else}
-            <div class="posts">
-              {#each posts as post}
-                <!-- Expanded view for selected post -->
-                {#if selectedPost && selectedPost.id === post.id}
-                  <div class="post selected-post">
-                    <div class="user-avatar"></div>
-                    <div class="post-content">
+          <div class="posts">
+              {#each filteredPosts as post}
+              <!-- Expanded view for selected post -->
+              {#if selectedPost && selectedPost.id === post.id}
+                <div class="post selected-post">
+                  <div class="user-avatar"></div>
+                  <div class="post-content">
                       {#if post.photo_url}
                         <div class="post-image-container">
                           <img src={post.photo_url} alt={post.title} class="post-image" />
                         </div>
                       {:else}
-                        <div class="post-image-container">
-                          <div class="post-image-placeholder"></div>
-                        </div>
+                    <div class="post-image-container">
+                      <div class="post-image-placeholder"></div>
+                    </div>
                       {/if}
-                      <h3 class="post-title">{post.title}</h3>
+                    <h3 class="post-title">{post.title}</h3>
                       <div class="post-category">{getCategoryDisplayName(post.category)}</div>
                       <p class="post-text">{post.content}</p>
-                      <div class="post-meta">
-                        <span class="meta-item date">
+                    <div class="post-meta">
+                      <span class="meta-item date">
                           <img src="/mdi_calendar.svg" alt="Дата" /> {formatDate(post.created_at)}
-                        </span>
+                      </span>
                         <span class="meta-item author">
                           <img src="/user-icon.svg" alt="Автор" /> {post.author?.username || 'Аноним'}
                         </span>
                         <span class="meta-item likes" on:click={() => handleLikePost(post.id)}>
                           <img src="main_page/like.svg" alt="Лайки" /> {post.likes?.length || 0}
-                        </span>
-                        <span class="meta-item replies">
+                      </span>
+                      <span class="meta-item replies">
                           <img src="/otvet.svg" alt="Ответы" /> {post.comments?.length || 0} 
                           {post.comments?.length === 1 ? 'ответ' : 
                            post.comments?.length >= 2 && post.comments?.length <= 4 ? 'ответа' : 'ответов'}
-                        </span>
-                      </div>
-                      
-                      <button class="view-replies collapse" on:click={() => viewPost(post)}>Свернуть ответы</button>
-                      
-                      <!-- Comments -->
-                      <div class="post-comments">
+                      </span>
+                    </div>
+                    
+                    <button class="view-replies collapse" on:click={() => viewPost(post)}>Свернуть ответы</button>
+                    
+                    <!-- Comments -->
+                    <div class="post-comments">
                         {#if post.comments && post.comments.length > 0}
-                          {#each post.comments as comment}
-                            <div class="comment">
-                              <div class="user-avatar"></div>
-                              <div class="comment-content">
+                      {#each post.comments as comment}
+                        <div class="comment">
+                          <div class="user-avatar"></div>
+                          <div class="comment-content">
                                 <h4 class="comment-author">{comment.author?.username || 'Аноним'}</h4>
                                 <p class="comment-text">{comment.content}</p>
                                 <div class="comment-date">{formatDate(comment.created_at)}</div>
-                              </div>
-                            </div>
-                          {/each}
+                          </div>
+                        </div>
+                      {/each}
                         {:else}
                           <div class="no-comments">
                             <p>Пока нет комментариев</p>
@@ -449,47 +473,50 @@
                           ></textarea>
                           <button on:click={() => handleSubmitComment(post.id)}>Отправить</button>
                         </div>
-                      </div>
                     </div>
                   </div>
-                {:else}
-                  <!-- Collapsed view for other posts -->
-                  <div class="post">
-                    <div class="user-avatar"></div>
-                    <div class="post-content">
+                </div>
+              {:else}
+                <!-- Collapsed view for other posts -->
+                <div class="post">
+                  <div class="user-avatar"></div>
+                  <div class="post-content">
                       {#if post.photo_url}
                         <div class="post-image-container">
                           <img src={post.photo_url} alt={post.title} class="post-image" />
                         </div>
                       {:else}
-                        <div class="post-image-container">
-                          <div class="post-image-placeholder"></div>
-                        </div>
+                    <div class="post-image-container">
+                      <div class="post-image-placeholder"></div>
+                    </div>
                       {/if}
-                      <h3 class="post-title">{post.title}</h3>
+                    <h3 class="post-title">{post.title}</h3>
                       <div class="post-category">{getCategoryDisplayName(post.category)}</div>
-                      <div class="post-meta">
-                        <span class="meta-item date">
+                    <div class="post-meta">
+                      <span class="meta-item date">
                           <img src="/mdi_calendar.svg" alt="Дата" /> {formatDate(post.created_at)}
-                        </span>
+                      </span>
                         <span class="meta-item author">
                           <img src="/user-icon.svg" alt="Автор" /> {post.author?.username || 'Аноним'}
                         </span>
                         <span class="meta-item likes" on:click={() => handleLikePost(post.id)}>
                           <img src="main_page/like.svg" alt="Лайки" /> {post.likes?.length || 0}
-                        </span>
-                        <span class="meta-item replies">
+                      </span>
+                      <span class="meta-item replies">
                           <img src="/otvet.svg" alt="Ответы" /> {post.comments?.length || 0}
                           {post.comments?.length === 1 ? 'ответ' : 
                            post.comments?.length >= 2 && post.comments?.length <= 4 ? 'ответа' : 'ответов'}
-                        </span>
-                      </div>
-                      <button class="view-replies" on:click={() => viewPost(post)}>Смотреть подробнее</button>
+                      </span>
                     </div>
+                      <div class="post-author">
+                        Автор: {post.author?.username || 'Аноним'}
+                      </div>
+                      <button class="view-replies" on:click={() => viewPost(post)}>Комментарии</button>
                   </div>
-                {/if}
-              {/each}
-            </div>
+                </div>
+              {/if}
+            {/each}
+          </div>
           {/if}
         </div>
 
@@ -520,35 +547,41 @@
             </div>
             
             <div class="topic-icons">
-              <div class="topic" on:click={() => newPostCategory = 'Флудилка'}>
-                <div class="topic-icon {newPostCategory === 'Флудилка' ? 'active' : ''}">
+              <div class="topic" on:click={() => filterPostsByCategory('Флудилка')}>
+                <div class="topic-icon {selectedCategoryFilter === 'Флудилка' ? 'active' : ''}">
                   <img src="/cute house.png" alt="Флудилка" class="icon-house" />
                 </div>
                 <span>Флудилка</span>
               </div>
-              <div class="topic" on:click={() => newPostCategory = 'Потеряшки'}>
-                <div class="topic-icon {newPostCategory === 'Потеряшки' ? 'active' : ''}">
+              <div class="topic" on:click={() => filterPostsByCategory('Потеряшки')}>
+                <div class="topic-icon {selectedCategoryFilter === 'Потеряшки' ? 'active' : ''}">
                   <img src="/search cute blue icon.png" alt="Потеряшки" class="icon-search" />
                 </div>
                 <span>Потеряшки</span>
               </div>
-              <div class="topic" on:click={() => newPostCategory = 'Подслушано'}>
-                <div class="topic-icon {newPostCategory === 'Подслушано' ? 'active' : ''}">
+              <div class="topic" on:click={() => filterPostsByCategory('Подслушано')}>
+                <div class="topic-icon {selectedCategoryFilter === 'Подслушано' ? 'active' : ''}">
                   <img src="/blue speech bubble.png" alt="Подслушано" class="icon-speech" />
                 </div>
                 <span>Подслушано</span>
               </div>
-              <div class="topic" on:click={() => newPostCategory = 'Конспекты'}>
-                <div class="topic-icon {newPostCategory === 'Конспекты' ? 'active' : ''}">
+              <div class="topic" on:click={() => filterPostsByCategory('Конспекты')}>
+                <div class="topic-icon {selectedCategoryFilter === 'Конспекты' ? 'active' : ''}">
                   <img src="/cute books.png" alt="Конспекты" class="icon-books" />
                 </div>
                 <span>Конспекты</span>
               </div>
-              <div class="topic" on:click={() => newPostCategory = 'Полезное'}>
-                <div class="topic-icon {newPostCategory === 'Полезное' ? 'active' : ''}">
+              <div class="topic" on:click={() => filterPostsByCategory('Полезное')}>
+                <div class="topic-icon {selectedCategoryFilter === 'Полезное' ? 'active' : ''}">
                   <img src="/thumbs up.png" alt="Полезное" class="icon-thumbs" />
                 </div>
                 <span>Полезное</span>
+              </div>
+              <div class="topic" on:click={() => filterPostsByCategory(null)}>
+                <div class="topic-icon {selectedCategoryFilter === null ? 'active' : ''}">
+                  <img src="/3lines.svg" alt="Все" />
+            </div>
+                <span>Все</span>
               </div>
             </div>
           </div>
@@ -910,16 +943,27 @@
 
   .post-image-container {
     display: flex;
-    justify-content: flex-start;
+    justify-content: center;
+    align-items: center;
     width: 100%;
+    height: 200px;
+    background-color: #f5f5f5;
+    border-radius: 10px;
+    margin-bottom: 15px;
+    overflow: hidden;
+  }
+
+  .post-image {
+    max-width: 100%;
+    max-height: 200px;
+    object-fit: contain;
   }
 
   .post-image-placeholder {
-    width: 70%;
-    height: 150px;
+    width: 100%;
+    height: 100%;
     background-color: #ffffff;
     border-radius: 10px;
-    margin-bottom: 15px;
   }
 
   .post-title {
@@ -968,6 +1012,7 @@
     justify-content: space-between;
     margin-top: 15px;
     gap: 10px;
+    flex-wrap: wrap;
   }
 
   .topic {
@@ -976,6 +1021,17 @@
     align-items: center;
     gap: 8px;
     font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    padding: 8px;
+    border-radius: 10px;
+    background-color: rgba(255, 255, 255, 0.5);
+  }
+  
+  .topic:hover {
+    transform: translateY(-3px);
+    background-color: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   }
 
   .topic-icon {
@@ -985,7 +1041,15 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background-color: #c0c0c0;
+    background-color: #e0e0e0;
+    transition: all 0.2s;
+    border: 2px solid transparent;
+  }
+
+  .topic-icon.active {
+    border: 2px solid #1A3882;
+    background-color: rgba(26, 56, 130, 0.1);
+    box-shadow: 0 0 10px rgba(26, 56, 130, 0.3);
   }
 
   .topic-icon img {
@@ -1203,12 +1267,39 @@
     display: none;
   }
 
-  /* Add these CSS rules to your existing styles */
-  .topic-icon.active {
-    border: 2px solid #3498db;
-    background-color: rgba(52, 152, 219, 0.1);
+  /* Selected category indicator */
+  .selected-filter-indicator {
+    display: flex;
+    align-items: center;
+    background-color: #e9f5ff;
+    border-radius: 8px;
+    padding: 8px 12px;
+    margin-bottom: 15px;
+    font-size: 14px;
   }
-  
+
+  .filter-name {
+    font-weight: 500;
+    color: #1A3882;
+    margin: 0 5px;
+  }
+
+  .clear-filter {
+    margin-left: auto;
+    background: none;
+    border: none;
+    color: #1A3882;
+    font-size: 18px;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0 5px;
+  }
+
+  .clear-filter:hover {
+    color: #ff4757;
+  }
+
+  /* Loading and error states */
   .loading, .error, .no-posts {
     padding: 20px;
     text-align: center;
@@ -1230,6 +1321,7 @@
     color: #495057;
   }
   
+  /* Posts content */
   .post-text {
     margin: 10px 0;
     line-height: 1.5;
@@ -1292,6 +1384,7 @@
     cursor: pointer;
   }
   
+  /* File uploads */
   .file-upload {
     position: relative;
     display: inline-block;
@@ -1326,8 +1419,8 @@
     background-color: #e9ecef;
     border-color: #3498db;
   }
-
-  /* Add these CSS rules to your existing styles */
+  
+  /* Auth error */
   .auth-error {
     background-color: #f8d7da;
     color: #721c24;
@@ -1345,8 +1438,8 @@
     font-weight: bold;
     margin-left: 10px;
   }
-
-  /* Enhanced form styling */
+  
+  /* Form styling */
   .styled-input {
     width: 100%;
     padding: 12px 15px;
@@ -1482,7 +1575,7 @@
     display: block;
   }
   
-  /* Title input field - shorter version */
+  /* Title input field */
   .title-input {
     max-width: 400px;
     font-weight: 500;
@@ -1518,5 +1611,24 @@
   
   .cancel-button:hover {
     background-color: #e9ecef;
+  }
+  
+  .post-author {
+    margin-top: 10px;
+    font-size: 14px;
+    color: #666;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .post-author:before {
+    content: '';
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    background-image: url('/user-icon.svg');
+    background-size: contain;
+    background-repeat: no-repeat;
   }
 </style>
