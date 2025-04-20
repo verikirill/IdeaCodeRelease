@@ -40,7 +40,7 @@
   let posts: Post[] = [];
   let newPostTitle = '';
   let newPostContent = '';
-  let newPostCategory = 'FLOOD';
+  let newPostCategory = 'Флудилка';
   let newPostImage: File | null = null;
   let imagePreviewUrl: string | null = null;
 
@@ -49,11 +49,11 @@
   let selectedPost: Post | null = null;
   
   const categoryLabels: Record<string, string> = {
-    'FLOOD': 'Флудилка',
-    'LOST_FOUND': 'Потеряшки',
-    'OVERHEARD': 'Подслушано',
-    'NOTES': 'Конспекты',
-    'USEFUL': 'Полезное'
+    'Флудилка': 'Флудилка',
+    'Потеряшки': 'Потеряшки',
+    'Подслушано': 'Подслушано',
+    'Конспекты': 'Конспекты',
+    'Полезное': 'Полезное'
   };
   
   function viewPost(post: Post): void {
@@ -73,8 +73,15 @@
   // Get auth token directly - try different possible keys
   function getAuthToken(): string {
     if (browser) {
-      // Check token in localStorage under different possible keys
-      const possibleKeys = ['token', 'access_token', 'auth_token', 'Bearer'];
+      // Try the standard key first (from auth.ts)
+      const accessToken = localStorage.getItem('access_token');
+      if (accessToken) {
+        console.log('Found access_token in localStorage');
+        return accessToken;
+      }
+      
+      // Fallback to other possible keys
+      const possibleKeys = ['token', 'auth_token', 'Bearer'];
       
       for (const key of possibleKeys) {
         const value = localStorage.getItem(key);
@@ -136,7 +143,23 @@
       
       console.log("Using token for post:", token);
 
+      let response;
+      
       if (newPostImage) {
+        // Validate image before sending
+        if (!newPostImage.type.startsWith('image/')) {
+          alert('Пожалуйста, выберите файл изображения');
+          return;
+        }
+        
+        // Log image details for debugging
+        console.log("Image details:", {
+          name: newPostImage.name,
+          type: newPostImage.type,
+          size: newPostImage.size
+        });
+        
+        // If we have an image, use the upload endpoint with FormData
         const formData = new FormData();
         formData.append('title', newPostTitle);
         formData.append('content', newPostContent);
@@ -145,26 +168,16 @@
         
         console.log("Sending FormData with authorization token");
         
-        const response = await fetch(`${API_URL}/posts/upload`, {
+        response = await fetch(`${API_URL}/posts/upload`, {
           method: 'POST',
           body: formData,
           headers: {
             'Authorization': `Bearer ${token}`
           }
         });
-        
-        console.log("Upload response status:", response.status);
-        
-        if (!response.ok) {
-          if (response.status === 401) {
-            authError = 'Необходимо войти в систему. Пожалуйста, авторизуйтесь.';
-            console.error("Authentication failed with 401");
-            return;
-          }
-          throw new Error(`HTTP error! Status: ${response.status}`);
-        }
       } else {
-        const response = await fetch(`${API_URL}/posts`, {
+        // If no image, use the regular post endpoint with JSON
+        response = await fetch(`${API_URL}/posts`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -176,20 +189,32 @@
             category: newPostCategory,
           })
         });
-        
-        if (!response.ok) {
-          if (response.status === 401) {
-            authError = 'Необходимо войти в систему. Пожалуйста, авторизуйтесь.';
-            return;
-          }
-          throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      
+      console.log("Post response status:", response.status);
+      
+      if (!response.ok) {
+        if (response.status === 401) {
+          authError = 'Необходимо войти в систему. Пожалуйста, авторизуйтесь.';
+          console.error("Authentication failed with 401");
+          return;
+        } else if (response.status === 422) {
+          // Handle validation errors
+          const errorData = await response.json();
+          console.error("Validation error:", errorData);
+          alert(`Ошибка валидации: ${errorData.detail || 'Проверьте правильность введенных данных'}`);
+          return;
         }
+        
+        const errorText = await response.text();
+        console.error("Error response:", errorText);
+        throw new Error(`HTTP error! Status: ${response.status}, Details: ${errorText}`);
       }
       
       // Reset form and refresh posts
       newPostTitle = '';
       newPostContent = '';
-      newPostCategory = 'FLOOD';
+      newPostCategory = 'Флудилка';
       newPostImage = null;
       imagePreviewUrl = null;
       showNewPostForm = false;
@@ -320,22 +345,10 @@
   }
   
   onMount(() => {
-    // Get token directly from localStorage and check auth status
-    token = getAuthToken();
-    isLoggedIn = !!token;
-    
-    console.log('Auth token:', token ? `${token.substring(0, 10)}...` : 'not found');
-    console.log('Is logged in:', isLoggedIn);
-    
-    // Debugging: print all localStorage keys 
-    if (browser) {
-      console.log('Available localStorage keys:');
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        console.log(`- ${key}`);
-      }
+    isLoggedIn = checkAuth();
+    if (isLoggedIn) {
+      token = getAuthToken(); // Set the token from localStorage
     }
-    
     fetchPosts();
   });
 </script>
@@ -507,32 +520,32 @@
             </div>
             
             <div class="topic-icons">
-              <div class="topic" on:click={() => newPostCategory = 'FLOOD'}>
-                <div class="topic-icon {newPostCategory === 'FLOOD' ? 'active' : ''}">
+              <div class="topic" on:click={() => newPostCategory = 'Флудилка'}>
+                <div class="topic-icon {newPostCategory === 'Флудилка' ? 'active' : ''}">
                   <img src="/cute house.png" alt="Флудилка" class="icon-house" />
                 </div>
                 <span>Флудилка</span>
               </div>
-              <div class="topic" on:click={() => newPostCategory = 'LOST_FOUND'}>
-                <div class="topic-icon {newPostCategory === 'LOST_FOUND' ? 'active' : ''}">
+              <div class="topic" on:click={() => newPostCategory = 'Потеряшки'}>
+                <div class="topic-icon {newPostCategory === 'Потеряшки' ? 'active' : ''}">
                   <img src="/search cute blue icon.png" alt="Потеряшки" class="icon-search" />
                 </div>
                 <span>Потеряшки</span>
               </div>
-              <div class="topic" on:click={() => newPostCategory = 'OVERHEARD'}>
-                <div class="topic-icon {newPostCategory === 'OVERHEARD' ? 'active' : ''}">
+              <div class="topic" on:click={() => newPostCategory = 'Подслушано'}>
+                <div class="topic-icon {newPostCategory === 'Подслушано' ? 'active' : ''}">
                   <img src="/blue speech bubble.png" alt="Подслушано" class="icon-speech" />
                 </div>
                 <span>Подслушано</span>
               </div>
-              <div class="topic" on:click={() => newPostCategory = 'NOTES'}>
-                <div class="topic-icon {newPostCategory === 'NOTES' ? 'active' : ''}">
+              <div class="topic" on:click={() => newPostCategory = 'Конспекты'}>
+                <div class="topic-icon {newPostCategory === 'Конспекты' ? 'active' : ''}">
                   <img src="/cute books.png" alt="Конспекты" class="icon-books" />
                 </div>
                 <span>Конспекты</span>
               </div>
-              <div class="topic" on:click={() => newPostCategory = 'USEFUL'}>
-                <div class="topic-icon {newPostCategory === 'USEFUL' ? 'active' : ''}">
+              <div class="topic" on:click={() => newPostCategory = 'Полезное'}>
+                <div class="topic-icon {newPostCategory === 'Полезное' ? 'active' : ''}">
                   <img src="/thumbs up.png" alt="Полезное" class="icon-thumbs" />
                 </div>
                 <span>Полезное</span>
@@ -568,40 +581,40 @@
                 <div class="category-selector">
                   <div class="category-options">
                     <label class="category-option">
-                      <input type="radio" name="category" value="FLOOD" bind:group={newPostCategory}>
-                      <span class="category-label {newPostCategory === 'FLOOD' ? 'active' : ''}">
+                      <input type="radio" name="category" value="Флудилка" bind:group={newPostCategory}>
+                      <span class="category-label {newPostCategory === 'Флудилка' ? 'active' : ''}">
                         <img src="/cute house.png" alt="Флудилка" class="category-icon" />
                         Флудилка
                       </span>
                     </label>
                     
                     <label class="category-option">
-                      <input type="radio" name="category" value="LOST_FOUND" bind:group={newPostCategory}>
-                      <span class="category-label {newPostCategory === 'LOST_FOUND' ? 'active' : ''}">
+                      <input type="radio" name="category" value="Потеряшки" bind:group={newPostCategory}>
+                      <span class="category-label {newPostCategory === 'Потеряшки' ? 'active' : ''}">
                         <img src="/search cute blue icon.png" alt="Потеряшки" class="category-icon" />
                         Потеряшки
                       </span>
                     </label>
                     
                     <label class="category-option">
-                      <input type="radio" name="category" value="OVERHEARD" bind:group={newPostCategory}>
-                      <span class="category-label {newPostCategory === 'OVERHEARD' ? 'active' : ''}">
+                      <input type="radio" name="category" value="Подслушано" bind:group={newPostCategory}>
+                      <span class="category-label {newPostCategory === 'Подслушано' ? 'active' : ''}">
                         <img src="/blue speech bubble.png" alt="Подслушано" class="category-icon" />
                         Подслушано
                       </span>
                     </label>
                     
                     <label class="category-option">
-                      <input type="radio" name="category" value="NOTES" bind:group={newPostCategory}>
-                      <span class="category-label {newPostCategory === 'NOTES' ? 'active' : ''}">
+                      <input type="radio" name="category" value="Конспекты" bind:group={newPostCategory}>
+                      <span class="category-label {newPostCategory === 'Конспекты' ? 'active' : ''}">
                         <img src="/cute books.png" alt="Конспекты" class="category-icon" />
                         Конспекты
                       </span>
                     </label>
                     
                     <label class="category-option">
-                      <input type="radio" name="category" value="USEFUL" bind:group={newPostCategory}>
-                      <span class="category-label {newPostCategory === 'USEFUL' ? 'active' : ''}">
+                      <input type="radio" name="category" value="Полезное" bind:group={newPostCategory}>
+                      <span class="category-label {newPostCategory === 'Полезное' ? 'active' : ''}">
                         <img src="/thumbs up.png" alt="Полезное" class="category-icon" />
                         Полезное
                       </span>
