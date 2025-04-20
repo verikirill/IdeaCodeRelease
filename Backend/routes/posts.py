@@ -9,7 +9,7 @@ import shutil
 from pathlib import Path
 
 from models import PostDB, UserDB, CommentDB
-from schemas import Post, PostCreate, Comment, CommentBase, Category
+from schemas import Post, PostCreate, Comment, CommentBase, Category, AuthorInfo
 from dependencies import get_db, get_current_active_user, convert_to_db_types
 
 post_router = APIRouter(prefix="/posts", tags=["Posts"])
@@ -279,10 +279,35 @@ async def create_comment(post_id: int, comment: CommentBase, current_user: UserD
     if db_post is None:
         raise HTTPException(status_code=404, detail="Post not found")
     
+    # Конвертируем данные комментария и устанавливаем author_id принудительно
     comment_dict = convert_to_db_types(comment)
     
-    db_comment = CommentDB(**comment_dict, post_id=post_id, author_id=current_user.id)
+    # Создаем комментарий с ID текущего пользователя
+    db_comment = CommentDB(
+        content=comment_dict.get("content"),
+        post_id=post_id,
+        author_id=current_user.id
+    )
+    
     db.add(db_comment)
     db.commit()
     db.refresh(db_comment)
-    return db_comment 
+    
+    # Добавляем информацию об авторе в ответ
+    # Информация об авторе комментария
+    author_data = {
+        "id": current_user.id,
+        "username": current_user.username
+    }
+    
+    # Создаем объект Comment для ответа
+    response_comment = Comment(
+        id=db_comment.id,
+        content=db_comment.content,
+        author_id=db_comment.author_id,
+        author=AuthorInfo(**author_data),
+        created_at=db_comment.created_at,
+        updated_at=db_comment.updated_at
+    )
+    
+    return response_comment 

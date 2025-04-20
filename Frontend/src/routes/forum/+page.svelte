@@ -5,11 +5,13 @@
   interface Comment {
     id: number;
     content: string;
-    author: {
+    author_id: number;
+    author?: {
       id: number;
       username: string;
     };
     created_at: string;
+    updated_at?: string;
   }
   
   interface Post {
@@ -18,14 +20,15 @@
     content: string;
     photo_url?: string;
     category: string;
-    author: {
+    author_id: number;
+    author?: {
       id: number;
       username: string;
     };
-    likes: any[];
+    likes: number[];
     comments: Comment[];
     created_at: string;
-    updated_at: string;
+    updated_at?: string;
   }
   
   const API_URL = 'http://localhost:8000';
