@@ -74,7 +74,8 @@
     },
     {
       title: 'База\nзнаний',
-      image: '/main_page/cute books.png'
+      image: '/main_page/cute books.png',
+      link: '/knowledge'
     },
     {
       title: 'Бюро\nнаходок',

@@ -1,10 +1,36 @@
-<script>
+<script lang="ts">
   import { onMount } from 'svelte';
+  import { authStore } from '$lib/services/auth';
+  import { goto } from '$app/navigation';
+  import { searchGroups, getUserGroup, selectUserGroup } from '$lib/services/timetable';
+  import type { UserData } from '$lib/services/auth';
+  import type { Group } from '$lib/services/timetable';
   
+  let user: UserData | null = null;
+  let isLoading = true;
+  let selectedGroup: Group | null = null;
+  let isLoadingGroup = true;
+  let searchQuery = '';
+  let searchResults: Group[] = [];
+  let showDropdown = false;
+  let isChangingGroup = false;
+  let changeSuccessful = false;
+  
+  // Редактирование профиля
+  let isEditMode = false;
+  let editData = {
+    first_name: '',
+    last_name: '',
+    bio: '',
+    phone: ''
+  };
+  let isSaving = false;
+  let saveSuccess = false;
+  let saveError = '';
+  
+  // Интерфейс аккаунта
   let avatar = '/account_photo.png';
   let selectedFrame = null;
-  let userName = 'Джанстей';
-  let userEmail = 'janstay_ux@gmail.com';
   let editingName = false;
   let editingEmail = false;
   let oldPassword = '';
@@ -18,51 +44,212 @@
   let showPurchaseModal = false;
   let selectedFrameToPurchase = null;
   
+  // Переменные для аватарки
+  let isUploadingAvatar = false;
+  let avatarUploadSuccess = false;
+  let avatarUploadError = '';
+  const API_URL = 'http://localhost:8000'; // Базовый URL API
+  
+  // Ссылки на DOM элементы
+  let nameInputRef: HTMLInputElement;
+  let emailInputRef: HTMLInputElement;
+  
   // Frames available for selection
   const frames = [
-    { id: 'purple', color: '#9966cc', image: '/account_circle_p.png', owned: true, price: 0 },
-    { id: 'pink', color: '#ff66b2', image: '/account_circle_pink.png', owned: false, price: 20 },
-    { id: 'blue', color: '#3399ff', image: '/account_circle_b.png', owned: false, price: 20 }
+    { id: 'purple', color: '#9966cc', image: `${API_URL}/static/frames/account_circle_p.png`, owned: true, price: 0 },
+    { id: 'pink', color: '#ff66b2', image: `${API_URL}/static/frames/account_circle_pink.png`, owned: false, price: 20 },
+    { id: 'blue', color: '#3399ff', image: `${API_URL}/static/frames/account_circle_b.png`, owned: false, price: 20 }
   ];
   
+  onMount(async () => {
+    const unsubAuth = authStore.isAuthenticated.subscribe((isAuth) => {
+      if (!isAuth) {
+        goto('/login');
+      }
+    });
+    
+    const unsubUser = authStore.user.subscribe((userData) => {
+      user = userData;
+      isLoading = false;
+      
+      if (user) {
+        // Инициализируем данные для редактирования
+        editData = {
+          first_name: user.first_name || '',
+          last_name: user.last_name || '',
+          bio: user.bio || '',
+          phone: user.phone || ''
+        };
+        
+        // Установка данных для интерфейса аккаунта
+        if (user.avatar) {
+          // Проверяем путь к аватару
+          if (user.avatar.startsWith('http')) {
+            avatar = user.avatar;
+          } else {
+            avatar = `${API_URL}${user.avatar}`;
+          }
+        }
+      }
+    });
+    
+    // Загружаем выбранную группу пользователя
+    loadUserGroup();
+    
+    return () => {
+      unsubAuth();
+      unsubUser();
+    };
+  });
+  
+  async function loadUserGroup() {
+    isLoadingGroup = true;
+    selectedGroup = await getUserGroup();
+    isLoadingGroup = false;
+  }
+  
+  async function handleSearchGroups() {
+    if (searchQuery.length >= 2) {
+      searchResults = await searchGroups(searchQuery);
+      showDropdown = true;
+    } else {
+      searchResults = [];
+    }
+  }
+  
+  async function handleSelectGroup(group: Group) {
+    try {
+      isChangingGroup = true;
+      changeSuccessful = false;
+      
+      const success = await selectUserGroup(group.id);
+      
+      if (success) {
+        selectedGroup = group;
+        changeSuccessful = true;
+        showDropdown = false;
+        
+        console.log('Группа успешно выбрана:', group);
+        
+        setTimeout(() => {
+          changeSuccessful = false;
+        }, 2000);
+      } else {
+        console.error('Не удалось выбрать группу');
+        alert('Не удалось выбрать группу. Пожалуйста, попробуйте еще раз.');
+      }
+    } catch (error) {
+      console.error('Ошибка при выборе группы:', error);
+      alert('Произошла ошибка при выборе группы. Пожалуйста, попробуйте позже.');
+    } finally {
+      isChangingGroup = false;
+    }
+  }
+  
+  // Редактирование профиля
+  async function saveProfile() {
+    if (!user) return;
+    
+    try {
+      isSaving = true;
+      saveError = '';
+      saveSuccess = false;
+      
+      // Проверяем обязательные поля
+      if (!editData.first_name || !editData.last_name) {
+        saveError = 'Имя и фамилия обязательны для заполнения';
+        return;
+      }
+      
+      // Отправляем данные на сервер
+      const success = await authStore.updateUserProfile(editData);
+      
+      if (success) {
+        saveSuccess = true;
+        // Обновляем имя и email в UI
+        if (user) {
+          userName = user.first_name || '';
+          userEmail = user.email || '';
+        }
+        
+        setTimeout(() => {
+          saveSuccess = false;
+        }, 2000);
+      } else {
+        saveError = 'Не удалось обновить профиль. Пожалуйста, попробуйте позже.';
+      }
+    } catch (error) {
+      console.error('Ошибка при обновлении профиля:', error);
+      saveError = 'Произошла ошибка при обновлении профиля.';
+    } finally {
+      isSaving = false;
+    }
+  }
+  
+  // Функции интерфейса аккаунта
   function toggleEditName() {
     editingName = !editingName;
+    if (editingName && user) {
+      // Установка текущего значения при входе в режим редактирования
+      userName = user.first_name || '';
+      // Установка фокуса на поле ввода после рендеринга
+      setTimeout(() => {
+        if (nameInputRef) {
+          nameInputRef.focus();
+        }
+      }, 0);
+    }
+    else if (!editingName) {
+      // Если пользователь выходит из режима редактирования
+      if (userName !== user?.first_name) {
+        // Проверяем, что имя не пустое
+        if (userName.trim() === '') {
+          alert('Имя не может быть пустым');
+          editingName = true; // Остаемся в режиме редактирования
+          return;
+        }
+        // Сохраняем изменения только если имя изменилось
+        editData.first_name = userName;
+        saveProfile();
+      }
+    }
   }
   
   function toggleEditEmail() {
-    editingEmail = !editingEmail;
+    // Сообщаем пользователю, что функция недоступна
+    alert('Функция изменения email временно недоступна');
+    // Не переключаем режим редактирования
+    return;
   }
   
   function saveChanges() {
-    // Would handle saving changes to the server
-    editingName = false;
-    editingEmail = false;
+    // Интегрируем с существующей функцией сохранения профиля
+    if (editingName || editingEmail) {
+      if (user) {
+        // Проверяем, что имя не пустое
+        if (editingName && userName.trim() === '') {
+          alert('Имя не может быть пустым');
+          return;
+        }
+        
+        // Сохраняем данные
+        editData.first_name = userName;
+        editData.last_name = user.last_name || ''; // Сохраняем текущую фамилию
+        saveProfile();
+      }
+      editingName = false;
+      editingEmail = false;
+    }
   }
   
   function togglePasswordVisibility(field) {
-    const inputId = field + '-password';
-    const input = document.getElementById(inputId);
-    
-    if (!input) return;
-    
-    // Save cursor position
-    const cursorPosition = input.selectionStart;
-    
-    // Toggle the input type
-    input.type = input.type === 'password' ? 'text' : 'password';
-    
-    // Update state variable
     if (field === 'old') {
-      showOldPassword = input.type === 'text';
+      showOldPassword = !showOldPassword;
     } else if (field === 'new') {
-      showNewPassword = input.type === 'text';
+      showNewPassword = !showNewPassword;
     } else if (field === 'confirm') {
-      showConfirmPassword = input.type === 'text';
+      showConfirmPassword = !showConfirmPassword;
     }
-    
-    // Restore cursor position
-    input.setSelectionRange(cursorPosition, cursorPosition);
-    input.focus();
   }
   
   function selectFrame(frameId) {
@@ -106,9 +293,79 @@
     }
   }
   
-  onMount(() => {
-    // Any initialization code
-  });
+  function handleLogout() {
+    authStore.logout();
+  }
+
+  // Инициализируем значения имени и email из данных пользователя
+  let userName = '';
+  let userEmail = '';
+  
+  // Обновляем значения имени и email только при инициализации или когда обновляется объект user,
+  // но не перезаписываем значения во время редактирования
+  $: if (user && !editingName) {
+    userName = user.first_name || '';
+  }
+  
+  $: if (user && !editingEmail) {
+    userEmail = user.email || '';
+  }
+
+  // Функция обработки загрузки аватара
+  async function handleAvatarUpload(event: Event) {
+    const target = event.target as HTMLInputElement;
+    const files = target.files;
+    
+    if (!files || files.length === 0) {
+      return;
+    }
+    
+    const file = files[0];
+    
+    // Проверяем, что это изображение
+    if (!file.type.startsWith('image/')) {
+      avatarUploadError = 'Пожалуйста, выберите изображение';
+      return;
+    }
+    
+    // Сбрасываем предыдущие статусы
+    isUploadingAvatar = true;
+    avatarUploadSuccess = false;
+    avatarUploadError = '';
+    
+    try {
+      const success = await authStore.uploadAvatar(file);
+      
+      if (success) {
+        avatarUploadSuccess = true;
+        // Если у пользователя есть аватар, обновляем локальную переменную
+        if (user && user.avatar) {
+          // Проверяем путь к аватару
+          if (user.avatar.startsWith('http')) {
+            avatar = user.avatar;
+          } else {
+            avatar = `${API_URL}${user.avatar}`;
+          }
+        }
+      } else {
+        avatarUploadError = 'Не удалось загрузить аватар. Пожалуйста, попробуйте позже.';
+      }
+    } catch (error) {
+      console.error('Ошибка при загрузке аватара:', error);
+      avatarUploadError = 'Произошла ошибка при загрузке. Пожалуйста, попробуйте позже.';
+    } finally {
+      isUploadingAvatar = false;
+      // Сбрасываем значение поля ввода, чтобы можно было выбрать тот же файл повторно
+      target.value = '';
+      
+      // Скрываем сообщение об успехе через 3 секунды
+      if (avatarUploadSuccess) {
+        setTimeout(() => {
+          avatarUploadSuccess = false;
+        }, 3000);
+      }
+    }
+  }
 </script>
 
 <div class="page-container">
@@ -136,9 +393,30 @@
           <h2>Аватарка профиля</h2>
           <div class="avatar-container">
             <div class="avatar-preview">
-              <img src={avatar} alt="Аватар профиля" class="profile-image" />
+              <img src={user?.avatar ? (user.avatar.startsWith('http') ? user.avatar : `${API_URL}${user.avatar}`) : `${API_URL}/static/avatars/account_photo.png`} alt="Аватар профиля" class="profile-image" />
               {#if selectedFrame}
                 <img src={frames.find(f => f.id === selectedFrame)?.image} alt="Рамка" class="frame-image" />
+              {/if}
+            </div>
+            <div class="avatar-upload-controls">
+              <label for="avatar-upload" class="avatar-upload-button">
+                Загрузить новую аватарку
+              </label>
+              <input 
+                type="file" 
+                id="avatar-upload" 
+                accept="image/*" 
+                on:change={handleAvatarUpload} 
+                class="avatar-input"
+              />
+              {#if isUploadingAvatar}
+                <div class="avatar-loading">Загрузка...</div>
+              {/if}
+              {#if avatarUploadSuccess}
+                <div class="avatar-success">Аватарка успешно загружена!</div>
+              {/if}
+              {#if avatarUploadError}
+                <div class="avatar-error">{avatarUploadError}</div>
               {/if}
             </div>
           </div>
@@ -178,9 +456,16 @@
             <div class="info-row">
               <div class="info-label">Имя</div>
               {#if editingName}
-                <input type="text" class="info-input" bind:value={userName} />
+                <input 
+                  type="text" 
+                  class="info-input" 
+                  bind:value={userName} 
+                  bind:this={nameInputRef}
+                  placeholder="Введите ваше имя"
+                  on:keypress={(e) => e.key === 'Enter' && toggleEditName()}
+                />
               {:else}
-                <div class="info-value">{userName}</div>
+                <div class="info-value">{userName || 'Не указано'}</div>
               {/if}
               <button class="edit-button" on:click={toggleEditName}>
                 {editingName ? 'Сохранить' : 'Изменить'}
@@ -189,16 +474,86 @@
             
             <div class="info-row">
               <div class="info-label">Почта</div>
-              {#if editingEmail}
-                <input type="email" class="info-input" bind:value={userEmail} />
-              {:else}
-                <div class="info-value">{userEmail}</div>
-              {/if}
-              <button class="edit-button" on:click={toggleEditEmail}>
-                {editingEmail ? 'Сохранить' : 'Изменить'}
-              </button>
+              <div class="info-value">{userEmail || 'Не указано'}</div>
             </div>
           </div>
+        </section>
+        
+        <!-- Group Selection Section -->
+        <section class="account-section">
+          <h2>Выбор группы</h2>
+          
+          {#if isLoadingGroup}
+            <div class="loading-indicator">Загрузка информации о группе...</div>
+          {:else if selectedGroup}
+            <div class="group-info">
+              <div class="group-row">
+                <div class="group-label">Текущая группа</div>
+                <div class="group-value">{selectedGroup.number} {selectedGroup.name || ''}</div>
+                <button class="group-edit-button" on:click={(e) => {
+                  e.preventDefault();
+                  showDropdown = !showDropdown;
+                }}>
+                  Изменить
+                </button>
+              </div>
+            </div>
+          {:else}
+            <div class="no-group-message">
+              <p>Группа не выбрана. Выберите группу для просмотра расписания.</p>
+              <button class="group-button" on:click={(e) => {
+                e.preventDefault();
+                showDropdown = !showDropdown;
+              }}>
+                Выбрать группу
+              </button>
+            </div>
+          {/if}
+          
+          {#if showDropdown}
+            <div class="search-group-container">
+              <div class="search-input-container">
+                <input 
+                  type="text" 
+                  class="search-input" 
+                  placeholder="Введите номер группы..." 
+                  bind:value={searchQuery}
+                  on:input={handleSearchGroups}
+                />
+                <button class="close-dropdown" on:click={(e) => {
+                  e.preventDefault();
+                  showDropdown = false;
+                }}>✕</button>
+              </div>
+              
+              {#if searchResults.length > 0}
+                <div class="search-results">
+                  {#each searchResults as group}
+                    <div 
+                      class="group-option" 
+                      class:selected={selectedGroup && selectedGroup.id === group.id}
+                      on:click={(e) => {
+                        e.preventDefault();
+                        handleSelectGroup(group);
+                      }}
+                    >
+                      {group.number} {group.name || ''}
+                    </div>
+                  {/each}
+                </div>
+              {:else if searchQuery.length >= 2}
+                <div class="no-results">Группы не найдены</div>
+              {/if}
+              
+              {#if changeSuccessful}
+                <div class="success-message">Группа успешно выбрана!</div>
+              {/if}
+              
+              {#if isChangingGroup}
+                <div class="loading-indicator">Обновление группы...</div>
+              {/if}
+            </div>
+          {/if}
         </section>
         
         <!-- Password Change Section -->
@@ -534,7 +889,9 @@
   /* Avatar styles */
   .avatar-container {
     display: flex;
-    justify-content: flex-start;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 20px;
   }
 
   .avatar-preview {
@@ -622,14 +979,25 @@
     padding: 8px;
     border: 1px solid #ddd;
     border-radius: 4px;
+    width: 100%;
+    min-width: 120px;
   }
 
   .edit-button {
     background-color: transparent;
+    color: #b3869f;
     border: none;
-    color: #3399ff;
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 14px;
+    font-weight: 600;
     cursor: pointer;
-    margin-left: 15px;
+    transition: all 0.2s ease;
+  }
+
+  .edit-button:hover {
+    background-color: rgba(179, 134, 159, 0.1);
+    color: #a06c87;
   }
 
   /* Password styles */
@@ -968,5 +1336,244 @@
   
   .coin-icon {
     display: none;
+  }
+
+  /* Стили для выбора группы */
+  .group-info {
+    margin-bottom: 15px;
+    border-bottom: 1px solid #eaeaea;
+    padding-bottom: 15px;
+  }
+  
+  .group-row {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    justify-content: center;
+  }
+  
+  .group-label {
+    color: #777;
+    font-size: 15px;
+    min-width: 120px;
+  }
+  
+  .group-value {
+    font-weight: 500;
+    font-size: 16px;
+    flex-grow: 1;
+    text-align: center;
+  }
+  
+  .group-edit-button {
+    background-color: transparent;
+    color: #b3869f;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  
+  .group-edit-button:hover {
+    background-color: rgba(179, 134, 159, 0.1);
+    color: #a06c87;
+  }
+  
+  .no-group-message {
+    background-color: #f9f9f9;
+    border-radius: 8px;
+    padding: 15px;
+    text-align: center;
+    margin-bottom: 15px;
+  }
+  
+  .group-button {
+    background-color: #1A3882;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 10px 20px;
+    cursor: pointer;
+    margin-top: 10px;
+    font-weight: 500;
+    transition: background-color 0.3s;
+  }
+  
+  .group-button:hover {
+    background-color: #15296a;
+  }
+  
+  .search-group-container {
+    background-color: #f9f9f9;
+    border-radius: 12px;
+    padding: 18px;
+    margin-top: 15px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+  }
+  
+  .search-input-container {
+    position: relative;
+    margin-bottom: 15px;
+    width: 100%;
+  }
+  
+  .search-input {
+    width: 100%;
+    padding: 12px 40px 12px 15px;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    font-size: 15px;
+    transition: border-color 0.3s;
+    box-sizing: border-box;
+  }
+  
+  .search-input:focus {
+    border-color: #1A3882;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(26, 56, 130, 0.1);
+  }
+  
+  .close-dropdown {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    font-size: 18px;
+    color: #666;
+    cursor: pointer;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background-color 0.3s;
+  }
+  
+  .close-dropdown:hover {
+    background-color: #e0e0e0;
+  }
+  
+  .search-results {
+    max-height: 220px;
+    overflow-y: auto;
+    border: 1px solid #eee;
+    border-radius: 10px;
+    background-color: white;
+    margin-bottom: 15px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+    width: 100%;
+    box-sizing: border-box;
+  }
+  
+  .group-option {
+    padding: 12px 18px;
+    cursor: pointer;
+    border-bottom: 1px solid #eee;
+    transition: background-color 0.2s;
+    font-size: 15px;
+  }
+  
+  .group-option:last-child {
+    border-bottom: none;
+  }
+  
+  .group-option:hover {
+    background-color: #f0f7ff;
+  }
+  
+  .group-option.selected {
+    background-color: #e6f0ff;
+    font-weight: 500;
+  }
+  
+  .loading-indicator {
+    text-align: center;
+    color: #666;
+    padding: 12px;
+    font-style: italic;
+  }
+  
+  .success-message {
+    background-color: #e6f7e6;
+    color: #2e7d32;
+    padding: 12px;
+    border-radius: 8px;
+    margin-top: 12px;
+    text-align: center;
+    font-weight: 500;
+    animation: fadeIn 0.3s ease;
+    box-shadow: 0 2px 4px rgba(46, 125, 50, 0.1);
+  }
+  
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  
+  .no-results {
+    padding: 15px;
+    text-align: center;
+    color: #666;
+    background-color: white;
+    border-radius: 8px;
+    border: 1px solid #eee;
+  }
+
+  /* Стили для загрузки аватара */
+  .avatar-upload-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+    max-width: 250px;
+  }
+  
+  .avatar-upload-button {
+    display: inline-block;
+    background-color: #1A3882;
+    color: white;
+    padding: 10px 15px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    text-align: center;
+    transition: background-color 0.3s;
+  }
+  
+  .avatar-upload-button:hover {
+    background-color: #15296a;
+  }
+  
+  .avatar-input {
+    display: none;
+  }
+  
+  .avatar-loading {
+    color: #666;
+    font-style: italic;
+  }
+  
+  .avatar-success {
+    color: #2e7d32;
+    background-color: #e6f7e6;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 14px;
+  }
+  
+  .avatar-error {
+    color: #d32f2f;
+    background-color: #fdeaea;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 14px;
   }
 </style> 

@@ -8,6 +8,7 @@
   import { browser } from '$app/environment';
   
   $: isAuthPage = $page.url.pathname === '/login' || $page.url.pathname === '/register';
+  $: isProfilePage = $page.url.pathname === '/profile' || $page.url.pathname === '/account';
   $: isAdminPanelPage = $page.url.pathname === '/admin_panel';
 
   onMount(async () => {
@@ -25,7 +26,10 @@
 <div class="app">
   {#if !isAuthPage}
     <Navbar />
-    <Profile />
+    {#if !isProfilePage}
+      <Profile />
+    {/if}
+    <ChatBot />
   {/if}
 
   <main>

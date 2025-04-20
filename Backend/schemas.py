@@ -35,13 +35,28 @@ class UserCreate(UserBase):
 
 class User(UserBase):
     id: int
+    avatar: Optional[str] = None
+    role: UserRole
+    bio: Optional[str] = None
+    phone: Optional[str] = None
+    birth_date: Optional[datetime] = None
     is_active: bool
     is_admin: bool
-    avatar: HttpUrl
 
     class Config:
         orm_mode = True
-        from_attributes = True
+
+
+class UserUpdate(BaseModel):
+    """Схема для обновления профиля пользователя"""
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    bio: Optional[str] = None
+    phone: Optional[str] = None
+    avatar: Optional[str] = None
+    
+    class Config:
+        orm_mode = True
 
 
 class Token(BaseModel):
