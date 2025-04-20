@@ -35,16 +35,26 @@
   let error = '';
   let isLoggedIn = false;
   let authError = '';
+  let token = '';
   
   let posts: Post[] = [];
   let newPostTitle = '';
   let newPostContent = '';
   let newPostCategory = 'FLOOD';
   let newPostImage: File | null = null;
+  let imagePreviewUrl: string | null = null;
 
   let newCommentText = '';
   
   let selectedPost: Post | null = null;
+  
+  const categoryLabels: Record<string, string> = {
+    'FLOOD': 'Флудилка',
+    'LOST_FOUND': 'Потеряшки',
+    'OVERHEARD': 'Подслушано',
+    'NOTES': 'Конспекты',
+    'USEFUL': 'Полезное'
+  };
   
   function viewPost(post: Post): void {
     selectedPost = selectedPost?.id === post.id ? null : post;
@@ -60,30 +70,37 @@
     showNewPostForm = !showNewPostForm;
   }
 
-  // Get auth token from localStorage
-  function getAuthToken(): string | null {
+  // Get auth token directly - try different possible keys
+  function getAuthToken(): string {
     if (browser) {
-      return localStorage.getItem('token');
+      // Check token in localStorage under different possible keys
+      const possibleKeys = ['token', 'access_token', 'auth_token', 'Bearer'];
+      
+      for (const key of possibleKeys) {
+        const value = localStorage.getItem(key);
+        if (value) {
+          console.log(`Found token in localStorage with key: ${key}`);
+          return value;
+        }
+      }
+      
+      // If we're here, we need to check for JWT format tokens that might be stored directly
+      for (const key of Object.keys(localStorage)) {
+        const value = localStorage.getItem(key);
+        if (value && value.split('.').length === 3) {
+          console.log(`Found what looks like a JWT token in localStorage with key: ${key}`);
+          return value;
+        }
+      }
     }
-    return null;
+    return '';
   }
 
   // Check if user is logged in
   function checkAuth(): boolean {
     const token = getAuthToken();
-    return token !== null && token !== '';
-  }
-
-  // Get headers with auth token
-  function getAuthHeaders(): Headers {
-    const headers = new Headers();
-    const token = getAuthToken();
-    
-    if (token) {
-      headers.append('Authorization', `Bearer ${token}`);
-    }
-    
-    return headers;
+    console.log("Auth token found:", !!token);
+    return !!token;
   }
 
   async function fetchPosts() {
@@ -116,9 +133,9 @@
         alert('Пожалуйста, заполните все поля');
         return;
       }
-
-      const headers = getAuthHeaders();
       
+      console.log("Using token for post:", token);
+
       if (newPostImage) {
         const formData = new FormData();
         formData.append('title', newPostTitle);
@@ -126,33 +143,38 @@
         formData.append('category', newPostCategory);
         formData.append('file', newPostImage);
         
+        console.log("Sending FormData with authorization token");
+        
         const response = await fetch(`${API_URL}/posts/upload`, {
           method: 'POST',
           body: formData,
-          headers: headers,
-          credentials: 'include',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
         });
+        
+        console.log("Upload response status:", response.status);
         
         if (!response.ok) {
           if (response.status === 401) {
             authError = 'Необходимо войти в систему. Пожалуйста, авторизуйтесь.';
+            console.error("Authentication failed with 401");
             return;
           }
           throw new Error(`HTTP error! Status: ${response.status}`);
         }
       } else {
-        // Set content type only when sending JSON
-        headers.append('Content-Type', 'application/json');
-        
         const response = await fetch(`${API_URL}/posts`, {
           method: 'POST',
-          headers: headers,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
           body: JSON.stringify({
             title: newPostTitle,
             content: newPostContent,
             category: newPostCategory,
-          }),
-          credentials: 'include',
+          })
         });
         
         if (!response.ok) {
@@ -169,6 +191,7 @@
       newPostContent = '';
       newPostCategory = 'FLOOD';
       newPostImage = null;
+      imagePreviewUrl = null;
       showNewPostForm = false;
       authError = '';
       
@@ -189,17 +212,16 @@
       if (!newCommentText) {
         return;
       }
-
-      const headers = getAuthHeaders();
-      headers.append('Content-Type', 'application/json');
       
       const response = await fetch(`${API_URL}/posts/${postId}/comments`, {
         method: 'POST',
-        headers: headers,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({
           content: newCommentText,
-        }),
-        credentials: 'include',
+        })
       });
 
       if (!response.ok) {
@@ -235,12 +257,11 @@
         return;
       }
       
-      const headers = getAuthHeaders();
-      
       const response = await fetch(`${API_URL}/posts/${postId}/like`, {
         method: 'POST',
-        headers: headers,
-        credentials: 'include',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       });
 
       if (!response.ok) {
@@ -270,6 +291,17 @@
     const input = event.target as HTMLInputElement;
     if (input.files && input.files.length > 0) {
       newPostImage = input.files[0];
+      
+      // Create preview URL for the selected image
+      if (newPostImage && newPostImage.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          imagePreviewUrl = e.target?.result as string;
+        };
+        reader.readAsDataURL(newPostImage);
+      } else {
+        imagePreviewUrl = null;
+      }
     }
   }
 
@@ -283,9 +315,27 @@
     }).format(date);
   }
   
+  function getCategoryDisplayName(category: string): string {
+    return categoryLabels[category] || category;
+  }
+  
   onMount(() => {
-    // Check authentication status
-    isLoggedIn = checkAuth();
+    // Get token directly from localStorage and check auth status
+    token = getAuthToken();
+    isLoggedIn = !!token;
+    
+    console.log('Auth token:', token ? `${token.substring(0, 10)}...` : 'not found');
+    console.log('Is logged in:', isLoggedIn);
+    
+    // Debugging: print all localStorage keys 
+    if (browser) {
+      console.log('Available localStorage keys:');
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        console.log(`- ${key}`);
+      }
+    }
+    
     fetchPosts();
   });
 </script>
@@ -337,6 +387,7 @@
                         </div>
                       {/if}
                       <h3 class="post-title">{post.title}</h3>
+                      <div class="post-category">{getCategoryDisplayName(post.category)}</div>
                       <p class="post-text">{post.content}</p>
                       <div class="post-meta">
                         <span class="meta-item date">
@@ -381,6 +432,7 @@
                           <textarea 
                             bind:value={newCommentText} 
                             placeholder="Добавить комментарий..."
+                            class="styled-input"
                           ></textarea>
                           <button on:click={() => handleSubmitComment(post.id)}>Отправить</button>
                         </div>
@@ -402,6 +454,7 @@
                         </div>
                       {/if}
                       <h3 class="post-title">{post.title}</h3>
+                      <div class="post-category">{getCategoryDisplayName(post.category)}</div>
                       <div class="post-meta">
                         <span class="meta-item date">
                           <img src="/mdi_calendar.svg" alt="Дата" /> {formatDate(post.created_at)}
@@ -500,33 +553,100 @@
               
               <div class="form-group">
                 <label>Заголовок</label>
-                <input type="text" bind:value={newPostTitle} placeholder="Введите заголовок" />
+                <input 
+                  type="text" 
+                  bind:value={newPostTitle} 
+                  placeholder="Введите заголовок" 
+                  class="styled-input title-input" 
+                  maxlength="100"
+                />
+                <div class="char-count">{newPostTitle.length}/100</div>
               </div>
               
               <div class="form-group">
-                <label>Файл поста</label>
-                <div class="file-upload">
-                  <input type="file" id="post-image" on:change={handleFileChange} accept="image/*" />
-                  <label for="post-image" class="file-upload-label">
-                    <div class="camera-icon">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
-                        <circle cx="12" cy="13" r="4"></circle>
-                      </svg>
+                <label>Категория</label>
+                <div class="category-selector">
+                  <div class="category-options">
+                    <label class="category-option">
+                      <input type="radio" name="category" value="FLOOD" bind:group={newPostCategory}>
+                      <span class="category-label {newPostCategory === 'FLOOD' ? 'active' : ''}">
+                        <img src="/cute house.png" alt="Флудилка" class="category-icon" />
+                        Флудилка
+                      </span>
+                    </label>
+                    
+                    <label class="category-option">
+                      <input type="radio" name="category" value="LOST_FOUND" bind:group={newPostCategory}>
+                      <span class="category-label {newPostCategory === 'LOST_FOUND' ? 'active' : ''}">
+                        <img src="/search cute blue icon.png" alt="Потеряшки" class="category-icon" />
+                        Потеряшки
+                      </span>
+                    </label>
+                    
+                    <label class="category-option">
+                      <input type="radio" name="category" value="OVERHEARD" bind:group={newPostCategory}>
+                      <span class="category-label {newPostCategory === 'OVERHEARD' ? 'active' : ''}">
+                        <img src="/blue speech bubble.png" alt="Подслушано" class="category-icon" />
+                        Подслушано
+                      </span>
+                    </label>
+                    
+                    <label class="category-option">
+                      <input type="radio" name="category" value="NOTES" bind:group={newPostCategory}>
+                      <span class="category-label {newPostCategory === 'NOTES' ? 'active' : ''}">
+                        <img src="/cute books.png" alt="Конспекты" class="category-icon" />
+                        Конспекты
+                      </span>
+                    </label>
+                    
+                    <label class="category-option">
+                      <input type="radio" name="category" value="USEFUL" bind:group={newPostCategory}>
+                      <span class="category-label {newPostCategory === 'USEFUL' ? 'active' : ''}">
+                        <img src="/thumbs up.png" alt="Полезное" class="category-icon" />
+                        Полезное
+                      </span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="form-group">
+                <label>Изображение</label>
+                <div class="file-upload-container">
+                  <div class="file-upload">
+                    <input type="file" id="post-image" on:change={handleFileChange} accept="image/*" />
+                    <label for="post-image" class="file-upload-label">
+                      <div class="camera-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                          <circle cx="12" cy="13" r="4"></circle>
+                        </svg>
+                      </div>
+                      {newPostImage ? newPostImage.name : 'Добавить изображение'}
+                    </label>
+                  </div>
+                  
+                  {#if imagePreviewUrl}
+                    <div class="image-preview">
+                      <img src={imagePreviewUrl} alt="Preview" />
                     </div>
-                    {newPostImage ? newPostImage.name : 'Добавить изображение'}
-                  </label>
+                  {/if}
                 </div>
               </div>
               
               <div class="form-group">
                 <label>Описание к посту</label>
-                <textarea bind:value={newPostContent} placeholder="Текст"></textarea>
+                <textarea bind:value={newPostContent} placeholder="Текст" class="styled-input"></textarea>
               </div>
               
-              <button class="publish-button" on:click={handleSubmitPost}>
-                Опубликовать запись
-              </button>
+              <div class="form-actions">
+                <button class="cancel-button" on:click={() => showNewPostForm = false}>
+                  Отмена
+                </button>
+                <button class="publish-button" on:click={handleSubmitPost}>
+                  Опубликовать запись
+                </button>
+              </div>
             </div>
             {/if}
           </div>
@@ -1183,13 +1303,15 @@
     padding: 10px;
     background-color: #f8f9fa;
     border: 1px dashed #ced4da;
-    border-radius: 4px;
+    border-radius: 8px;
     cursor: pointer;
     min-height: 100px;
+    transition: all 0.2s ease;
   }
   
   .file-upload-label:hover {
     background-color: #e9ecef;
+    border-color: #3498db;
   }
 
   /* Add these CSS rules to your existing styles */
@@ -1209,5 +1331,179 @@
     text-decoration: underline;
     font-weight: bold;
     margin-left: 10px;
+  }
+
+  /* Enhanced form styling */
+  .styled-input {
+    width: 100%;
+    padding: 12px 15px;
+    border: 2px solid #dee2e6;
+    border-radius: 8px;
+    font-family: 'SF Pro Display', Arial, sans-serif;
+    font-size: 16px;
+    transition: border-color 0.2s ease;
+    background-color: #f8f9fa;
+  }
+  
+  .styled-input:focus {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.25);
+  }
+  
+  textarea.styled-input {
+    min-height: 120px;
+    resize: vertical;
+  }
+  
+  .form-group {
+    margin-bottom: 20px;
+  }
+  
+  .form-group label {
+    display: block;
+    font-weight: 500;
+    margin-bottom: 8px;
+    color: #343a40;
+  }
+  
+  .publish-button {
+    background: linear-gradient(to right, #3498db, #2980b9);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 0;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    width: 100%;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  }
+  
+  .publish-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  }
+  
+  /* Category styling */
+  .post-category {
+    display: inline-block;
+    background-color: #e9ecef;
+    color: #495057;
+    font-size: 14px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    margin-bottom: 10px;
+  }
+  
+  /* Category Selector */
+  .category-selector {
+    margin-top: 10px;
+  }
+  
+  .category-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  
+  .category-option {
+    cursor: pointer;
+    user-select: none;
+  }
+  
+  .category-option input {
+    position: absolute;
+    opacity: 0;
+    height: 0;
+    width: 0;
+  }
+  
+  .category-label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 8px;
+    border-radius: 8px;
+    border: 2px solid transparent;
+    transition: all 0.2s;
+    background-color: #f8f9fa;
+  }
+  
+  .category-label.active {
+    border-color: #3498db;
+    background-color: rgba(52, 152, 219, 0.1);
+  }
+  
+  .category-label:hover {
+    background-color: #e9ecef;
+  }
+  
+  .category-icon {
+    width: 30px;
+    height: 30px;
+    margin-bottom: 5px;
+  }
+  
+  /* Image preview */
+  .file-upload-container {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+  }
+  
+  .image-preview {
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 5px;
+    width: 100%;
+    max-width: 300px;
+    overflow: hidden;
+  }
+  
+  .image-preview img {
+    width: 100%;
+    height: auto;
+    border-radius: 4px;
+    display: block;
+  }
+  
+  /* Title input field - shorter version */
+  .title-input {
+    max-width: 400px;
+    font-weight: 500;
+    font-size: 18px;
+  }
+  
+  .char-count {
+    position: absolute;
+    right: 10px;
+    top: 42px;
+    font-size: 12px;
+    color: #6c757d;
+  }
+  
+  /* Form actions */
+  .form-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+  }
+  
+  .cancel-button {
+    background-color: #f8f9fa;
+    color: #495057;
+    border: 1px solid #ced4da;
+    border-radius: 8px;
+    padding: 12px 25px;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+  
+  .cancel-button:hover {
+    background-color: #e9ecef;
   }
 </style>
