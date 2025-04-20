@@ -14,25 +14,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libopencv-dev \
     libgl1-mesa-glx \
     libglib2.0-0 \
-    # Зависимости для PyMuPDF
-    pkg-config \
-    libfreetype6-dev \
-    libharfbuzz-dev \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements first (без PyMuPDF и EasyOCR)
+# Copy requirements and install dependencies
 COPY requirements.txt .
 
 # Устанавливаем PyMuPDF через бинарные пакеты
-RUN pip install --no-cache-dir --extra-index-url https://www.piwheels.org/simple PyMuPDF==1.23.3 || \
-    pip install --no-cache-dir --only-binary=:all: PyMuPDF==1.23.3 || \
-    pip install --no-cache-dir PyMuPDF==1.22.5  # Используем более старую версию как резервный вариант
+RUN pip install --no-cache-dir -r requirements.txt
     
-# Теперь устанавливаем остальные зависимости
-RUN grep -v "PyMuPDF" requirements.txt > requirements_filtered.txt && \
-    pip install --no-cache-dir -r requirements_filtered.txt
-
 # Copy application code
 COPY . .
 
