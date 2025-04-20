@@ -9,7 +9,7 @@ services:
       - POSTGRES_PASSWORD=z$27^7tvmsJs
       - POSTGRES_DB=users
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - ./postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
     ports:
       - "5432:5432"
@@ -43,6 +43,3 @@ services:
     environment:
       - ORIGIN=http://localhost:3000
       - API_URL=http://backend:8000 
-
-volumes:
-  postgres_data: 
