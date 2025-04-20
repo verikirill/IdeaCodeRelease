@@ -195,7 +195,6 @@
   });
 </script>
 
-<div class="main-page"></div>
 <div class="main-content">
   <div class="container">
     <main>
@@ -354,16 +353,7 @@
 
   /* Фон страницы */
   .main-page {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-image: url('/main_page/main_background.png');
-    background-size: cover;
-    background-position: center center;
-    background-repeat: no-repeat;
-    z-index: -1;
+    display: none; /* Hiding the page-specific background */
   }
   
   .main-content {
