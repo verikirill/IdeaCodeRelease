@@ -38,7 +38,7 @@
             Физик генерирует небольшие тесты для закрепления материала по пройденной теме
           </p>
           <div class="tests-graphic">
-            <img src="/testy_minutki.png" alt="Тесты минутки" class="tests-image" />
+            <img src="/baza.svg" alt="Тесты минутки" class="tests-image" />
           </div>
         </button>
         
@@ -49,7 +49,7 @@
             Физик помогает быстро и четко составить конспект для предстоящей пары!
           </p>
           <div class="notes-graphic">
-            <img src="/gotovie_konsp.png" alt="Готовые конспекты" class="notes-image" />
+            <img src="/orange.png" alt="Готовые конспекты" class="notes-image" />
           </div>
         </button>
         
@@ -57,15 +57,31 @@
         <button class="knowledge-card blue" on:click={goToReminders} on:keydown={(e) => e.key === 'Enter' && goToReminders()}>
           <h2>Напоминания о предстоящих контрольных через телеграм</h2>
           
-          <div class="reminder-example">
+          <div class="reminder-container">
             <div class="reminder-date">Сегодня</div>
             
             <div class="reminder-card">
               <div class="reminder-subject">Физик</div>
               <div class="reminder-text">
-                До итоговой котрольной по дискретной математике осталось<br>
+                До итоговой котрольной по дискретной математике осталось 
                 2 дня, поспеши подготовиться
               </div>
+            </div>
+            
+            <div class="reminder-card">
+              <div class="reminder-subject">Физик</div>
+              <div class="reminder-text">
+                Я подготовил для вас тесты-минутки по теме основы ООП
+              </div>
+              <div class="lightning-icon">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="#FFD43B">
+                  <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                </svg>
+              </div>
+            </div>
+            
+            <div class="connect-button">
+              Подключить напоминания
             </div>
           </div>
         </button>
@@ -94,6 +110,8 @@
   /* Header */
   .header {
     margin: 40px 0;
+    padding-left: calc((100% - 1025px) / 2);
+    text-align: left;
   }
   
   h1 {
@@ -111,8 +129,9 @@
   
   /* Knowledge Grid */
   .knowledge-grid {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: 500px 500px;
+    grid-template-rows: auto auto;
     gap: 25px;
     margin-top: 40px;
     justify-content: center;
@@ -159,7 +178,7 @@
   .dark {
     background-color: #1E1E1E;
     color: white;
-    width: 560px;
+    width: 500px;
     height: 400.47px;
     min-height: unset;
     position: relative;
@@ -172,13 +191,18 @@
     text-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
   }
   
+  .dark .card-description {
+    opacity: 0.7;
+  }
+  
   .orange {
     background-color: #FF6C26;
     color: white;
     position: relative;
-    width: 560px;
-    height: 400.47px;
+    width: 500px;
+    height: 500px;
     min-height: unset;
+    margin-top: 20%;
   }
   
   .orange h2, 
@@ -188,12 +212,42 @@
     text-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
   }
   
+  .orange .card-description {
+    opacity: 0.7;
+  }
+  
   .blue {
     background-color: #3B69D5;
     color: white;
-    width: 1145px; /* 560px × 2 + 25px gap */
+    width: 500px;
     min-height: unset;
-    height: 300px;
+    height: auto;
+    grid-column: 1;
+    grid-row: 2;
+    margin-top: -40%;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .blue h2,
+  .blue .reminder-container {
+    position: relative;
+    z-index: 2;
+    text-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+  }
+  
+  /* Add blue background image container */
+  .blue::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url('/blue.png');
+    background-size: cover;
+    background-position: center;
+    z-index: 1;
   }
   
   /* Notes graphic - updated to fill the entire box */
@@ -228,7 +282,7 @@
   .tests-image {
     width: 798px;
     height: 390px;
-    object-fit: cover;
+    object-fit: contain;
     opacity: 1;
     /* Center the image in the container */
     position: absolute;
@@ -238,36 +292,71 @@
   }
   
   /* Reminder section */
-  .reminder-example {
+  .reminder-container {
     margin-top: 20px;
     z-index: 2;
     position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    align-items: center;
   }
   
   .reminder-date {
     font-size: 14px;
     color: rgba(255, 255, 255, 0.8);
-    margin-bottom: 10px;
+    margin-bottom: 5px;
     text-align: center;
   }
   
   .reminder-card {
-    background-color: rgba(255, 255, 255, 0.1);
-    border-radius: 10px;
-    padding: 20px;
-    max-width: 400px;
+    background-color: rgba(0, 0, 0, 0.25);
+    border-radius: 15px;
+    padding: 15px;
+    width: 100%;
+    max-width: 420px;
     backdrop-filter: blur(5px);
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    position: relative;
   }
   
   .reminder-subject {
     font-weight: 600;
     margin-bottom: 10px;
+    color: #4ADE80;
   }
   
   .reminder-text {
     font-size: 14px;
     line-height: 1.5;
+    color: white;
+  }
+  
+  .lightning-icon {
+    position: absolute;
+    bottom: 15px;
+    right: 15px;
+    background-color: rgba(0, 0, 0, 0.3);
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .connect-button {
+    background-color: rgba(255, 255, 255, 0.2);
+    border-radius: 50px;
+    padding: 12px 25px;
+    color: white;
+    font-size: 16px;
+    text-align: center;
+    margin-top: 10px;
+    width: 90%;
+    max-width: 420px;
+    cursor: pointer;
+    backdrop-filter: blur(5px);
   }
   
   @media (max-width: 1200px) {
