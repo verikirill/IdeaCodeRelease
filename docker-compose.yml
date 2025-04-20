@@ -8,12 +8,18 @@ services:
     container_name: ideacode-backend
     ports:
       - "8000:8000"
+    volumes:
+      - ./Backend:/app
+      - ./static:/app/static
     environment:
       - DB_HOST=188.225.58.188
       - DB_NAME=users
       - DB_USER=admin
       - DB_PASSWORD=z$27^7tvmsJs
+      - PYTHONUNBUFFERED=1
+      - DEBUG=True
     restart: unless-stopped
+    command: uvicorn server:app --host 0.0.0.0 --port 8000 --reload
 
   frontend:
     build:
@@ -22,9 +28,12 @@ services:
     container_name: ideacode-frontend
     ports:
       - "3000:3000"
-    depends_on:
-      - backend
-    restart: unless-stopped
+    volumes:
+      - ./Frontend:/app
+      - /app/node_modules
     environment:
       - ORIGIN=http://localhost:3000
-      - API_URL=http://backend:8000 
+      - API_URL=http://localhost:8000
+      - NODE_ENV=development
+    restart: unless-stopped
+    command: npm run dev 
