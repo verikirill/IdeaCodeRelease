@@ -219,7 +219,6 @@
 <div class="container">
   <div class="header-section">
     <h1 class="menu-title">Меню столовой</h1>
-    <div class="header-line"></div>
   </div>
 
   {#if $loading}
@@ -351,19 +350,6 @@
     margin: 40px 0 50px;
     position: relative;
     padding-bottom: 10px;
-  }
-
-  .header-section:before {
-    content: "";
-    position: absolute;
-    top: -15px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 50px;
-    height: 4px;
-    background-color: #333;
-    border-radius: 2px;
-    opacity: 0.2;
   }
 
   /* Основные стили для заголовка страницы меню */

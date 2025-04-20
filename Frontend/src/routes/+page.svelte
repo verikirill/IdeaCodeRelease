@@ -10,6 +10,8 @@
   let currentStoryIndex = 0;
   let prevStoryIndex = 0;
   let direction = 1; // 1 для вперед, -1 для назад
+  let cardsReady = false; // Flag to control the animation of service cards
+  let storiesReady = false; // Flag to control the animation of story circles
   
   interface Story {
     id: number;
@@ -82,7 +84,8 @@
     },
     {
       title: 'Бюро\nнаходок',
-      image: '/main_page/search cute blue icon.png'
+      image: '/main_page/search cute blue icon.png',
+      link: '/forum'
     },
     {
       title: 'Меню\nстоловой',
@@ -91,7 +94,8 @@
     },
     {
       title: 'Мемы\nот студентов',
-      image: '/main_page/emoji with tongue.png'
+      image: '/main_page/emoji with tongue.png',
+      link: '/forum'
     },
     {
       title: 'Отзывы\nо преподавателях',
@@ -100,19 +104,35 @@
     },
     {
       title: 'Пропуск\nна машину',
-      image: '/main_page/document file with code symbol.png'
+      image: '/main_page/document file with code symbol.png',
+      link: 'https://app.profcomff.com/apps/7'
     },
     {
       title: 'Калькулятор\nстипендий',
-      image: '/main_page/banknotes.png'
+      image: '/main_page/banknotes.png',
+      link: 'https://app.profcomff.com/apps/39'
     },
     {
       title: 'Бесплатный\nпринтер',
-      image: '/main_page/cash receipt.png'
+      image: '/main_page/cash receipt.png',
+      link: 'https://app.profcomff.com/apps/1'
     },
     {
       title: 'Вступить\nв профком',
-      image: '/main_page/two speech bubbles.png'
+      image: '/main_page/two speech bubbles.png',
+      link: 'https://lk.msuprof.com/'
+    },
+    {
+      title: 'Бронирование',
+      image: '/main_page/cute bookmark.png'
+    },
+    {
+      title: 'To-do\nлист',
+      image: '/main_page/cute lamp.png'
+    },
+    {
+      title: 'Психолог',
+      image: '/main_page/happy emoji with hearts.png'
     }
   ];
   
@@ -175,6 +195,16 @@
         avatar = '/avatar.png';
       }
     });
+
+    // Animate stories first
+    setTimeout(() => {
+      storiesReady = true;
+      
+      // Then animate service cards after stories appear
+      setTimeout(() => {
+        cardsReady = true;
+      }, 600);
+    }, 300);
     
     return () => {
       // Отписаться при уничтожении компонента
@@ -183,18 +213,29 @@
   });
 </script>
 
-<div class="main-page"></div>
 <div class="main-content">
   <div class="container">
     <main>
-      <h1 class="main-title">Твой ФФ - университет в одном клике.</h1>
+      <h1 class="main-title" 
+         in:fly={{ y: -30, duration: 600, delay: 100, easing: cubicOut }}>
+        Твой ФФ - университет в одном клике.
+      </h1>
 
       <!-- Main circular buttons -->
       <div class="circular-buttons">
         {#each stories as story, index}
-          <div class="circular-button" on:click={() => openStories(index)}>
-            <img src={story.image} alt={story.title} class="story-image">
-          </div>
+          {#if storiesReady}
+            <div class="circular-button" 
+                 in:fly={{ x: -50, y: 20, duration: 500, delay: index * 150, easing: cubicOut }}
+                 on:click={() => openStories(index)}>
+              <img src={story.image} alt={story.title} class="story-image"
+                   in:fade={{ duration: 300, delay: (index * 150) + 300 }}>
+            </div>
+          {:else}
+            <div class="circular-button circular-button-hidden">
+              <img src={story.image} alt={story.title} class="story-image">
+            </div>
+          {/if}
         {/each}
       </div>
 
@@ -202,15 +243,26 @@
       <section class="services">
         <h2>Сервисы</h2>
         <div class="services-grid">
-          {#each services as service}
-            <div class="service-card" 
-                 on:click={() => service.link && navigateTo(service.link)} 
-                 class:clickable={service.link}>
-              <h3>{service.title}</h3>
-              <div class="service-icon">
-                <img src={service.image} alt={service.title} />
+          {#each services as service, i}
+            {#if cardsReady}
+              <div class="service-card" 
+                   in:fly={{ y: 50, duration: 400, delay: i * 100, easing: cubicOut }} 
+                   on:click={() => service.link && navigateTo(service.link)} 
+                   class:clickable={service.link}>
+                <h3>{service.title}</h3>
+                <div class="service-icon">
+                  <img src={service.image} alt={service.title} />
+                </div>
               </div>
-            </div>
+            {:else}
+              <div class="service-card service-card-hidden"
+                   class:clickable={service.link}>
+                <h3>{service.title}</h3>
+                <div class="service-icon">
+                  <img src={service.image} alt={service.title} />
+                </div>
+              </div>
+            {/if}
           {/each}
         </div>
       </section>
@@ -331,16 +383,7 @@
 
   /* Фон страницы */
   .main-page {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-image: url('/main_page/main_background.png');
-    background-size: cover;
-    background-position: center center;
-    background-repeat: no-repeat;
-    z-index: -1;
+    display: none; /* Hiding the page-specific background */
   }
   
   .main-content {
@@ -391,6 +434,10 @@
     margin: 0 10px;
     cursor: pointer;
   }
+  
+  .circular-button-hidden {
+    opacity: 0;
+  }
 
   .story-image {
     width: 90px;
@@ -439,6 +486,10 @@
     margin: 0;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
     overflow: hidden;
+  }
+  
+  .service-card-hidden {
+    opacity: 0;
   }
   
   .service-card.clickable {
