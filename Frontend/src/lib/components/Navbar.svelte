@@ -2,6 +2,7 @@
   import { page } from '$app/stores';
   
   $: currentRoute = $page.url.pathname;
+  $: isAdminPanelPage = $page.url.pathname === '/admin_panel';
 </script>
 
 <nav class="navbar">
@@ -11,19 +12,23 @@
         Расписание <span class="icon"><img src="/top1.svg" alt="Расписание"></span>
       </button>
     </a>
+    {#if !isAdminPanelPage}
     <a href="/forum" class="nav-link">
       <button class="nav-button {currentRoute === '/forum' ? 'active' : ''}">
         Форум <span class="icon"><img src="/top2.svg" alt="Форум"></span>
       </button>
     </a>
+    {/if}
     <a href="/" class="nav-link">
       <button class="nav-button {currentRoute === '/' ? 'active' : ''}">
         Сервисы <span class="icon"><img src="/top3.svg" alt="Сервисы"></span>
       </button>
     </a>
+    {#if !isAdminPanelPage}
     <a href="https://t.me/FFizikBot" target="_blank" rel="noopener noreferrer" class="tg-link">
       <img src="/tg_icon.svg" alt="Telegram" class="tg-icon">
     </a>
+    {/if}
   </div>
 </nav>
 
