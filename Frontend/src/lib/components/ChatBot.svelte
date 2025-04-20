@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, afterUpdate } from 'svelte';
   import { authStore } from '$lib/services/auth';
   import { 
     chatHistoryStore, 
@@ -19,6 +19,11 @@
   let isLoading = false;
   let currentContext = '';
   let isAuthenticated = false;
+  let isListening = false;
+  let recognition: SpeechRecognition | null = null;
+  let isSpeechSupported = false;
+  let showSpeechNotSupportedToast = false;
+  let chatMessagesElement: HTMLElement;
   
   // Subscribe to the loading state
   isLoadingStore.subscribe(value => {
@@ -30,6 +35,17 @@
     isAuthenticated = value;
   });
   
+  // Прокрутка чата вниз после обновления сообщений
+  afterUpdate(() => {
+    scrollChatToBottom();
+  });
+  
+  function scrollChatToBottom() {
+    if (chatMessagesElement) {
+      chatMessagesElement.scrollTop = chatMessagesElement.scrollHeight;
+    }
+  }
+  
   function closeChatBubble() {
     showChatBubble = false;
   }
@@ -40,11 +56,17 @@
     
     if (showChatDialog) {
       loadChatHistory();
+      // Маленькая задержка для прокрутки после загрузки истории чата
+      setTimeout(scrollChatToBottom, 100);
     }
   }
   
   function closeChatDialog() {
     showChatDialog = false;
+    if (isListening && recognition) {
+      recognition.stop();
+      isListening = false;
+    }
   }
   
   async function handleSendMessage() {
@@ -90,6 +112,67 @@
     return cleanHtml;
   }
   
+  // Инициализация и управление распознаванием речи
+  function initSpeechRecognition() {
+    const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
+    
+    if (SpeechRecognitionAPI) {
+      isSpeechSupported = true;
+      recognition = new SpeechRecognitionAPI();
+      recognition.lang = 'ru-RU';
+      recognition.continuous = false;
+      recognition.interimResults = true;
+      
+      recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        userMessage = transcript;
+      };
+      
+      recognition.onstart = () => {
+        isListening = true;
+      };
+      
+      recognition.onend = () => {
+        isListening = false;
+        if (userMessage.trim() !== '') {
+          handleSendMessage();
+        }
+      };
+      
+      recognition.onerror = (event) => {
+        console.error('Ошибка распознавания речи:', event.error);
+        isListening = false;
+      };
+    } else {
+      isSpeechSupported = false;
+      console.error('Распознавание речи не поддерживается в этом браузере.');
+    }
+  }
+  
+  function toggleSpeechRecognition() {
+    if (!isSpeechSupported) {
+      showSpeechNotSupportedToast = true;
+      setTimeout(() => {
+        showSpeechNotSupportedToast = false;
+      }, 3000);
+      return;
+    }
+    
+    if (!recognition) {
+      initSpeechRecognition();
+    }
+    
+    if (recognition) {
+      if (isListening) {
+        recognition.stop();
+        isListening = false;
+      } else {
+        recognition.start();
+        isListening = true;
+      }
+    }
+  }
+  
   onMount(() => {
     // Check if current page has hints
     currentContext = $page.url.pathname;
@@ -98,6 +181,9 @@
         showChatBubble = true;
       }
     });
+    
+    // Инициализация распознавания речи
+    initSpeechRecognition();
   });
 </script>
 
@@ -139,7 +225,7 @@
           {getCurrentDate()}
         </div>
         
-        <div class="chat-messages">
+        <div class="chat-messages" bind:this={chatMessagesElement}>
           {#if $chatHistoryStore.length === 0}
             <div class="message bot">
               <div class="message-sender">Физик</div>
@@ -168,7 +254,10 @@
         </div>
         
         <div class="chat-input">
-          <button class="voice-button" disabled={isLoading}>
+          <button class="voice-button {isListening ? 'active' : ''}" on:click={toggleSpeechRecognition} disabled={isLoading}>
+            {#if isListening}
+              <div class="voice-indicator"></div>
+            {/if}
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
               <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
@@ -178,12 +267,13 @@
           </button>
           <input 
             type="text" 
-            placeholder="Ваше сообщение" 
+            placeholder={isListening ? 'Говорите...' : 'Ваше сообщение'} 
             bind:value={userMessage}
             on:keydown={(e) => e.key === 'Enter' && handleSendMessage()}
-            disabled={isLoading}
+            disabled={isLoading || isListening}
+            class={isListening ? 'listening' : ''}
           />
-          <button class="send-button" on:click={handleSendMessage} disabled={isLoading}>
+          <button class="send-button" on:click={handleSendMessage} disabled={isLoading || isListening}>
             {#if isLoading}
               <svg class="spinner" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" />
@@ -196,6 +286,12 @@
             {/if}
           </button>
         </div>
+        
+        {#if showSpeechNotSupportedToast}
+          <div class="speech-not-supported-toast">
+            Ваш браузер не поддерживает распознавание голоса
+          </div>
+        {/if}
       </div>
     </div>
   {/if}
@@ -360,6 +456,29 @@
     display: flex;
     flex-direction: column;
     gap: 15px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+  }
+  
+  /* Стилизация полосы прокрутки для WebKit (Chrome, Safari, Opera) */
+  .chat-messages::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  .chat-messages::-webkit-scrollbar-track {
+    background: transparent;
+    border-radius: 10px;
+    margin: 5px 0;
+  }
+  
+  .chat-messages::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 10px;
+    transition: background-color 0.3s ease;
+  }
+  
+  .chat-messages::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(0, 0, 0, 0.3);
   }
   
   .message {
@@ -530,5 +649,100 @@
     width: 100%;
     height: 100%;
     object-fit: contain;
+  }
+
+  .voice-button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #777;
+    transition: all 0.2s ease;
+    position: relative;
+  }
+
+  .voice-button:hover {
+    color: #2563eb;
+  }
+
+  .voice-button.active {
+    color: #ef4444;
+    animation: pulse 1.5s infinite;
+  }
+
+  .voice-indicator {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(239, 68, 68, 0.1);
+    z-index: -1;
+    animation: wave 1.5s infinite;
+  }
+
+  @keyframes wave {
+    0% {
+      width: 24px;
+      height: 24px;
+      opacity: 0.8;
+    }
+    100% {
+      width: 48px;
+      height: 48px;
+      opacity: 0;
+    }
+  }
+
+  @keyframes pulse {
+    0% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.1);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+
+  .voice-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  input.listening {
+    background-color: rgba(239, 68, 68, 0.05);
+    border-color: #ef4444;
+  }
+
+  .speech-not-supported-toast {
+    position: absolute;
+    bottom: 70px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #ef4444;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-size: 14px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    animation: fadeIn 0.3s ease-in-out;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translate(-50%, 10px);
+    }
+    to {
+      opacity: 1;
+      transform: translate(-50%, 0);
+    }
   }
 </style> 
