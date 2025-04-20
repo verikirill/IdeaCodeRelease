@@ -11,8 +11,8 @@
 <<<<<<< HEAD
   $: isProfilePage = $page.url.pathname === '/profile' || $page.url.pathname === '/account';
 =======
->>>>>>> 60b5be39d654fcb8da126a016bb8f602f8e48f7d
   $: isAdminPanelPage = $page.url.pathname === '/admin_panel';
+>>>>>>> 60b5be39d654fcb8da126a016bb8f602f8e48f7d
 
   onMount(async () => {
     if (browser) {
