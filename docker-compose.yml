@@ -21,9 +21,6 @@ services:
     container_name: ideacode-backend
     ports:
       - "8000:8000"
-    volumes:
-      - ./Backend:/app
-      - ./static:/app/static
     environment:
       - DB_HOST=postgres
       - DB_NAME=users
@@ -40,9 +37,6 @@ services:
     container_name: ideacode-frontend
     ports:
       - "3000:3000"
-    volumes:
-      - ./Frontend:/app
-      - /app/node_modules
     depends_on:
       - backend
     restart: unless-stopped
