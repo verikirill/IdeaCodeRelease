@@ -430,33 +430,33 @@
           {:else if posts.length === 0}
             <div class="no-posts">Пока нет записей в форуме</div>
           {:else}
-            <div class="posts">
+          <div class="posts">
               {#each filteredPosts as post}
-                <!-- Expanded view for selected post -->
-                {#if selectedPost && selectedPost.id === post.id}
-                  <div class="post selected-post">
-                    <div class="user-avatar"></div>
-                    <div class="post-content">
+              <!-- Expanded view for selected post -->
+              {#if selectedPost && selectedPost.id === post.id}
+                <div class="post selected-post">
+                  <div class="user-avatar"></div>
+                  <div class="post-content">
                       {#if post.photo_url}
                         <div class="post-image-container">
                           <img src={post.photo_url} alt={post.title} class="post-image" />
                         </div>
                       {:else}
-                        <div class="post-image-container">
-                          <div class="post-image-placeholder"></div>
-                        </div>
+                    <div class="post-image-container">
+                      <div class="post-image-placeholder"></div>
+                    </div>
                       {/if}
-                      <h3 class="post-title">{post.title}</h3>
+                    <h3 class="post-title">{post.title}</h3>
                       <div class="post-category">{getCategoryDisplayName(post.category)}</div>
                       <p class="post-text">{post.content}</p>
-                      <div class="post-meta">
-                        <span class="meta-item date">
+                    <div class="post-meta">
+                      <span class="meta-item date">
                           <img src="/mdi_calendar.svg" alt="Дата" /> {formatDate(post.created_at)}
                         </span>
                         <span class="meta-item likes" on:click={() => handleLikePost(post.id)}>
                           <img src="main_page/like.svg" alt="Лайки" /> {post.likes?.length || 0}
-                        </span>
-                        <span class="meta-item replies">
+                      </span>
+                      <span class="meta-item replies">
                           <img src="/otvet.svg" alt="Ответы" /> {post.comments?.length || 0} 
                           {post.comments?.length === 1 ? 'ответ' : 
                            post.comments?.length >= 2 && post.comments?.length <= 4 ? 'ответа' : 'ответов'}
@@ -472,16 +472,16 @@
                       <!-- Comments -->
                       <div class="post-comments">
                         {#if post.comments && post.comments.length > 0}
-                          {#each post.comments as comment}
-                            <div class="comment">
-                              <div class="user-avatar"></div>
-                              <div class="comment-content">
+                      {#each post.comments as comment}
+                        <div class="comment">
+                          <div class="user-avatar"></div>
+                          <div class="comment-content">
                                 <h4 class="comment-author">{comment.author?.username || 'Аноним'}</h4>
                                 <p class="comment-text">{comment.content}</p>
                                 <div class="comment-date">{formatDate(comment.created_at)}</div>
-                              </div>
-                            </div>
-                          {/each}
+                          </div>
+                        </div>
+                      {/each}
                         {:else}
                           <div class="no-comments">
                             <p>Пока нет комментариев</p>
@@ -497,33 +497,33 @@
                           ></textarea>
                           <button on:click={() => handleSubmitComment(post.id)}>Отправить</button>
                         </div>
-                      </div>
                     </div>
                   </div>
-                {:else}
-                  <!-- Collapsed view for other posts -->
-                  <div class="post">
-                    <div class="user-avatar"></div>
-                    <div class="post-content">
+                </div>
+              {:else}
+                <!-- Collapsed view for other posts -->
+                <div class="post">
+                  <div class="user-avatar"></div>
+                  <div class="post-content">
                       {#if post.photo_url}
                         <div class="post-image-container">
                           <img src={post.photo_url} alt={post.title} class="post-image" />
                         </div>
                       {:else}
-                        <div class="post-image-container">
-                          <div class="post-image-placeholder"></div>
-                        </div>
+                    <div class="post-image-container">
+                      <div class="post-image-placeholder"></div>
+                    </div>
                       {/if}
-                      <h3 class="post-title">{post.title}</h3>
+                    <h3 class="post-title">{post.title}</h3>
                       <div class="post-category">{getCategoryDisplayName(post.category)}</div>
-                      <div class="post-meta">
-                        <span class="meta-item date">
+                    <div class="post-meta">
+                      <span class="meta-item date">
                           <img src="/mdi_calendar.svg" alt="Дата" /> {formatDate(post.created_at)}
                         </span>
                         <span class="meta-item likes" on:click={() => handleLikePost(post.id)}>
                           <img src="main_page/like.svg" alt="Лайки" /> {post.likes?.length || 0}
-                        </span>
-                        <span class="meta-item replies">
+                      </span>
+                      <span class="meta-item replies">
                           <img src="/otvet.svg" alt="Ответы" /> {post.comments?.length || 0}
                           {post.comments?.length === 1 ? 'ответ' : 
                            post.comments?.length >= 2 && post.comments?.length <= 4 ? 'ответа' : 'ответов'}
@@ -535,11 +535,11 @@
                       </div>
                       
                       <button class="view-replies" on:click={() => viewPost(post)}>Комментарии</button>
-                    </div>
                   </div>
-                {/if}
-              {/each}
-            </div>
+                </div>
+              {/if}
+            {/each}
+          </div>
           {/if}
         </div>
 
@@ -603,7 +603,7 @@
               <div class="topic" on:click={() => filterPostsByCategory(null)}>
                 <div class="topic-icon {selectedCategoryFilter === null ? 'active' : ''}">
                   <img src="/3lines.svg" alt="Все" />
-                </div>
+            </div>
                 <span>Все</span>
               </div>
             </div>

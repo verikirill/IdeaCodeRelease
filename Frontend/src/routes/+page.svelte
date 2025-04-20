@@ -124,7 +124,8 @@
     },
     {
       title: 'Бронирование',
-      image: '/main_page/cute bookmark.png'
+      image: '/main_page/cute bookmark.png',
+      link: '/booking'
     },
     {
       title: 'To-do\nлист',

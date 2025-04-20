@@ -49,7 +49,7 @@
     {#if isAuthenticated}
       <img src={avatar} alt="Профиль" />
     {:else}
-      <img src="/avatar_placeholder.png" alt="Гость" />
+      <img src="/avatar_placeholder.svg" alt="Гость" />
     {/if}
   </div>
   
