@@ -1,19 +1,6 @@
 version: '3.8'
 
 services:
-  postgres:
-    image: postgres:16-alpine
-    container_name: ideacode-postgres
-    environment:
-      - POSTGRES_USER=admin
-      - POSTGRES_PASSWORD=z$27^7tvmsJs
-      - POSTGRES_DB=users
-    volumes:
-      - ./postgres_data:/var/lib/postgresql/data
-    restart: unless-stopped
-    ports:
-      - "5432:5432"
-
   backend:
     build:
       context: ./Backend
@@ -22,12 +9,10 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DB_HOST=postgres
+      - DB_HOST=188.225.58.188
       - DB_NAME=users
       - DB_USER=admin
       - DB_PASSWORD=z$27^7tvmsJs
-    depends_on:
-      - postgres
     restart: unless-stopped
 
   frontend:
