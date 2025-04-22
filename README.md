@@ -89,3 +89,8 @@ TTBank - это многофункциональная платформа для
    npm run dev
    ```
 4. Откройте браузер по адресу `http://localhost:5173`
+
+
+
+   
+![tvoyff](https://github.com/user-attachments/assets/d6996d59-3c50-4df9-8b81-f48987af8e8b)
